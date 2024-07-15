@@ -2,20 +2,20 @@ package com.equifax.c2o.api.RequestDetails.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
-import java.util.Map;
-
-@RestControllerAdvice
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(CustomHeaderValidationException.class)
+    public ResponseEntity<ErrorResponse> handleCustomHeaderValidationException(CustomHeaderValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ex.getMessage(), ex.getValidationErrors()));
+    }
+
     @ExceptionHandler(CustomException.class)
-    public ResponseEntity<Map<String, String>> handleCustomException(CustomException ex) {
-        Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("code", ex.getCode());
-        errorResponse.put("message", ex.getMessage());
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ErrorResponse> handleCustomException(CustomException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(ex.getCode(), ex.getMessage());
+        return ResponseEntity.status(ex.getStatus()).body(errorResponse);
     }
 }
