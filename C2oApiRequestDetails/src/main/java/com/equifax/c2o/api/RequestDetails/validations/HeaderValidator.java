@@ -1,6 +1,6 @@
 package com.equifax.c2o.api.RequestDetails.validation;
 
-import com.equifax.c2o.api.RequestDetails.exception.HeaderValidationException;
+import com.equifax.c2o.api.RequestDetails.exception.CommonValidationException;
 import com.equifax.c2o.api.RequestDetails.exception.ValidationError;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -24,7 +24,7 @@ public class HeaderValidator {
         validateBusinessUnits(businessUnits, validationErrors);
 
         if (!validationErrors.isEmpty()) {
-            throw new HeaderValidationException(validationErrors);
+            throw new CommonValidationException("EFX_HEADER_VALIDATION_FAILED", "Header validation failed", validationErrors);
         }
     }
 
