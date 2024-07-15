@@ -1,7 +1,7 @@
 package com.equifax.c2o.api.RequestDetails.exception;
 
-public class CustomException extends RuntimeException {
-    private final String code;
+public abstract class CustomException extends RuntimeException {
+    private String code;
 
     public CustomException(String code, String message) {
         super(message);

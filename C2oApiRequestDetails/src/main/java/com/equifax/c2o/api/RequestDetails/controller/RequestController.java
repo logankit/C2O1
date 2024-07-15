@@ -1,12 +1,13 @@
 package com.equifax.c2o.api.RequestDetails.controller;
 
-import com.equifax.c2o.api.RequestDetails.dto.PayloadResponseDTO;
 import com.equifax.c2o.api.RequestDetails.dto.RequestDetailsDTO;
 import com.equifax.c2o.api.RequestDetails.dto.RequestDetailsResponseDTO;
+import com.equifax.c2o.api.RequestDetails.dto.PayloadResponseDTO;
 import com.equifax.c2o.api.RequestDetails.dto.StatusUpdateRequest;
-import com.equifax.c2o.api.RequestDetails.service.PayloadService;
 import com.equifax.c2o.api.RequestDetails.service.RequestDetailsService;
 import com.equifax.c2o.api.RequestDetails.service.StatusUpdateService;
+import com.equifax.c2o.api.RequestDetails.service.PayloadService;
+import com.equifax.c2o.api.RequestDetails.validation.HeaderValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,9 @@ public class RequestController {
     @Autowired
     private PayloadService payloadService;
 
+    @Autowired
+    private HeaderValidator headerValidator;
+
     @GetMapping
     public RequestDetailsResponseDTO getRequestDetails(
             @RequestHeader("ClientCorrelationId") String clientCorrelationId,
@@ -39,6 +43,8 @@ public class RequestController {
             @RequestParam(required = false) String requestStatus,
             @RequestParam(defaultValue = "0") int startIndex,
             @RequestParam(defaultValue = "20") int pageLength) {
+
+        headerValidator.validateHeaders(clientCorrelationId, sourceSystem, businessUnit != null ? Arrays.asList(businessUnit) : null);
 
         RequestDetailsDTO requestDetailsDTO = new RequestDetailsDTO();
         requestDetailsDTO.setClientCorrelationId(clientCorrelationId);
@@ -61,6 +67,8 @@ public class RequestController {
             @RequestHeader("SourceSystem") String sourceSystem,
             @RequestBody StatusUpdateRequest statusUpdateRequest) {
 
+        headerValidator.validateHeaders(clientCorrelationId, sourceSystem, null);
+
         statusUpdateService.updateStatus(statusUpdateRequest);
         return ResponseEntity.ok("CAPI Status update received successfully");
     }
@@ -68,7 +76,11 @@ public class RequestController {
     @GetMapping("/{correlationId}/payload")
     public ResponseEntity<PayloadResponseDTO> getPayload(
             @PathVariable("correlationId") String correlationId,
+            @RequestHeader("ClientCorrelationId") String clientCorrelationId,
+            @RequestHeader("SourceSystem") String sourceSystem,
             @RequestHeader(value = "ReqType", defaultValue = "RequestPayload") String reqType) {
+
+        headerValidator.validateHeaders(clientCorrelationId, sourceSystem, null);
 
         PayloadResponseDTO payloadResponseDTO = payloadService.getPayload(correlationId, reqType);
         return ResponseEntity.ok(payloadResponseDTO);
