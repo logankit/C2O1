@@ -44,7 +44,7 @@ public class RequestController {
             @RequestParam(defaultValue = "0") int startIndex,
             @RequestParam(defaultValue = "20") int pageLength) {
 
-        headerValidator.validateHeaders(clientCorrelationId, sourceSystem, businessUnit != null ? Arrays.asList(businessUnit) : null);
+        String requestCode = headerValidator.validateHeaders(clientCorrelationId, sourceSystem, businessUnit != null ? Arrays.asList(businessUnit) : null, requestStatus);
 
         RequestDetailsDTO requestDetailsDTO = new RequestDetailsDTO();
         requestDetailsDTO.setClientCorrelationId(clientCorrelationId);
@@ -54,11 +54,13 @@ public class RequestController {
         requestDetailsDTO.setBusinessUnit(businessUnit != null ? Arrays.asList(businessUnit) : null);
         requestDetailsDTO.setContractId(contractId);
         requestDetailsDTO.setOrderId(orderId);
-        requestDetailsDTO.setRequestStatus(requestStatus);
+        requestDetailsDTO.setRequestStatus(requestCode != null ? Integer.parseInt(requestCode) : null); // Set requestCode as number
         requestDetailsDTO.setStartIndex(startIndex);
         requestDetailsDTO.setPageLength(pageLength);
 
-        return requestDetailsService.getRequestDetails(requestDetailsDTO);
+        RequestDetailsResponseDTO response = requestDetailsService.getRequestDetails(requestDetailsDTO);
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping

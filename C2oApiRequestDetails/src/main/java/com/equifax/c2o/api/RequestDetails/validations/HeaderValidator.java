@@ -9,6 +9,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class HeaderValidator {
@@ -16,16 +17,19 @@ public class HeaderValidator {
     @Autowired
     private EntityManager entityManager;
 
-    public void validateHeaders(String clientCorrelationId, String sourceSystem, List<String> businessUnits) {
+    public String validateHeaders(String clientCorrelationId, String sourceSystem, List<String> businessUnits, String requestStatus) {
         List<ValidationError> validationErrors = new ArrayList<>();
 
         validateClientCorrelationId(clientCorrelationId, validationErrors);
         validateSourceSystem(sourceSystem, validationErrors);
         validateBusinessUnits(businessUnits, validationErrors);
+        String requestCode = validateRequestStatus(requestStatus, validationErrors);
 
         if (!validationErrors.isEmpty()) {
             throw new CommonValidationException("EFX_HEADER_VALIDATION_FAILED", "Header validation failed", validationErrors);
         }
+
+        return requestCode;
     }
 
     private void validateClientCorrelationId(String clientCorrelationId, List<ValidationError> validationErrors) {
@@ -59,5 +63,22 @@ public class HeaderValidator {
                 validationErrors.add(new ValidationError("EFX_INVALID_BUSINESS_UNIT", "Allowed values for business unit are " + allowedValues));
             }
         }
+    }
+
+    private String validateRequestStatus(String requestStatus, List<ValidationError> validationErrors) {
+        TypedQuery<Object[]> query = entityManager.createQuery(
+            "SELECT c.id, c.description FROM ContractStatusLookup c " +
+            "WHERE c.statusSource = 'CONTRACT_API_REQ_STATUS' AND c.enableFlag = 'Y'", Object[].class);
+        List<Object[]> result = query.getResultList();
+        List<String> allowedStatuses = result.stream().map(row -> (String) row[1]).collect(Collectors.toList());
+        for (Object[] row : result) {
+            if (row[1].equals(requestStatus)) {
+                return row[0].toString(); // Return request_code as string
+            }
+        }
+
+        String allowedValues = String.join(", ", allowedStatuses);
+        validationErrors.add(new ValidationError("EFX_INVALID_REQUEST_STATUS", "Allowed values for request status are " + allowedValues));
+        return null;
     }
 }
