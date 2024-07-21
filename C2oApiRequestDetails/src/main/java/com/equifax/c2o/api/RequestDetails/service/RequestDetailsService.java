@@ -4,8 +4,10 @@ import com.equifax.c2o.api.RequestDetails.dto.RequestDetailsDTO;
 import com.equifax.c2o.api.RequestDetails.dto.RequestDetailsResponseDTO;
 import com.equifax.c2o.api.RequestDetails.exception.CustomException;
 import com.equifax.c2o.api.RequestDetails.model.Request;
-import com.equifax.c2o.api.RequestDetails.repository.RequestRepository;
+import com.equifax.c2o.api.RequestDetails.repository.CustomRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -16,32 +18,30 @@ import java.util.stream.Collectors;
 public class RequestDetailsService {
 
     @Autowired
-    private RequestRepository requestRepository;
+    private CustomRequestRepository customRequestRepository;
 
     public RequestDetailsResponseDTO getRequestDetails(RequestDetailsDTO requestDetailsDTO) {
         validateRequestDetails(requestDetailsDTO);
 
         Timestamp toDate = requestDetailsDTO.getToDate() != null ? requestDetailsDTO.getToDate() : new Timestamp(System.currentTimeMillis());
 
-        List<Request> requests = requestRepository.findRequests(
+        PageRequest pageRequest = PageRequest.of(requestDetailsDTO.getStartIndex(), requestDetailsDTO.getPageLength());
+
+        Page<Request> requestsPage = customRequestRepository.findRequests(
                 requestDetailsDTO.getSourceSystem(),
                 requestDetailsDTO.getFromDate(),
                 toDate,
                 requestDetailsDTO.getBusinessUnit(),
                 requestDetailsDTO.getContractId() != null ? Long.parseLong(requestDetailsDTO.getContractId()) : null,
                 requestDetailsDTO.getOrderId() != null ? Long.parseLong(requestDetailsDTO.getOrderId()) : null,
-                requestDetailsDTO.getRequestStatus() != null ? Integer.parseInt(requestDetailsDTO.getRequestStatus()) : null
+                requestDetailsDTO.getRequestStatus() != null ? Integer.parseInt(requestDetailsDTO.getRequestStatus()) : null,
+                pageRequest
         );
 
-        List<Request> paginatedRequests = requests.stream()
-                .skip(requestDetailsDTO.getStartIndex())
-                .limit(requestDetailsDTO.getPageLength())
-                .collect(Collectors.toList());
-
-        List<RequestDetailsDTO> requestDetails = paginatedRequests.stream().map(this::mapToRequestDetailsDTO).collect(Collectors.toList());
+        List<RequestDetailsDTO> requestDetails = requestsPage.stream().map(this::mapToRequestDetailsDTO).collect(Collectors.toList());
 
         RequestDetailsResponseDTO responseDTO = new RequestDetailsResponseDTO();
-        responseDTO.setTotalRecords(requests.size());
+        responseDTO.setTotalRecords((int) requestsPage.getTotalElements());
         responseDTO.setResults(requestDetails);
 
         return responseDTO;

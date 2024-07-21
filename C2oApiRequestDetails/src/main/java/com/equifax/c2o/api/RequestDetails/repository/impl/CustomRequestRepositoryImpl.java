@@ -3,6 +3,9 @@ package com.equifax.c2o.api.RequestDetails.repository.impl;
 import com.equifax.c2o.api.RequestDetails.model.Request;
 import com.equifax.c2o.api.RequestDetails.repository.CustomRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import javax.persistence.EntityManager;
@@ -17,37 +20,31 @@ public class CustomRequestRepositoryImpl implements CustomRequestRepository {
     private EntityManager entityManager;
 
     @Override
-    public List<Request> findRequests(String sourceSystemId, Timestamp fromDate, Timestamp toDate, List<String> businessUnit,
-                                      Long contractId, Long orderId, Integer requestStatus) {
-        String jpql = "SELECT r FROM Request r WHERE " +
-                "(:sourceSystemId IS NULL OR r.sourceSystemId = :sourceSystemId) AND " +
-                "(:fromDate IS NULL OR r.createdDate >= :fromDate) AND " +
-                "(:toDate IS NULL OR r.createdDate <= :toDate) AND " +
-                "(:businessUnit IS NULL OR r.businessUnit IN :businessUnit) AND " +
-                "(:contractId IS NULL OR r.contractId = :contractId) AND " +
-                "(:orderId IS NULL OR r.orderId = :orderId) AND " +
-                "(:requestStatus IS NULL OR r.requestStatus = :requestStatus)";
+    public Page<Request> findRequests(String sourceSystem, Timestamp fromDate, Timestamp toDate, String businessUnit, Long contractId, Long orderId, Integer requestStatus, Pageable pageable) {
+        String jpql = "SELECT r FROM Request r " +
+                "WHERE (:sourceSystem IS NULL OR r.sourceSystemId = :sourceSystem) " +
+                "AND (:fromDate IS NULL OR r.date >= :fromDate) " +
+                "AND (:toDate IS NULL OR r.date <= :toDate) " +
+                "AND (:businessUnit IS NULL OR r.businessUnit = :businessUnit) " +
+                "AND (:contractId IS NULL OR r.contractId = :contractId) " +
+                "AND (:orderId IS NULL OR r.orderId = :orderId) " +
+                "AND (:requestStatus IS NULL OR r.requestStatus = :requestStatus)";
+
+        Query query = entityManager.createQuery(jpql);
         
-        Query query = entityManager.createQuery(jpql, Request.class);
-        query.setParameter("sourceSystemId", sourceSystemId);
+        query.setParameter("sourceSystem", sourceSystem);
         query.setParameter("fromDate", fromDate);
         query.setParameter("toDate", toDate);
         query.setParameter("businessUnit", businessUnit);
         query.setParameter("contractId", contractId);
         query.setParameter("orderId", orderId);
         query.setParameter("requestStatus", requestStatus);
-        
-        // Log the query and parameters
-        System.out.println("Executing query: " + jpql);
-        System.out.println("Parameters:");
-        System.out.println("sourceSystemId = " + sourceSystemId);
-        System.out.println("fromDate = " + fromDate);
-        System.out.println("toDate = " + toDate);
-        System.out.println("businessUnit = " + businessUnit);
-        System.out.println("contractId = " + contractId);
-        System.out.println("orderId = " + orderId);
-        System.out.println("requestStatus = " + requestStatus);
-        
-        return query.getResultList();
+
+        int totalRows = query.getResultList().size();
+        query.setFirstResult((int) pageable.getOffset());
+        query.setMaxResults(pageable.getPageSize());
+
+        List<Request> resultList = query.getResultList();
+        return new PageImpl<>(resultList, pageable, totalRows);
     }
 }
