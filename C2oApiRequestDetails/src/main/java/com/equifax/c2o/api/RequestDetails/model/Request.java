@@ -11,6 +11,10 @@ public class Request {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "request_id")
     private Long requestId;
+	
+	@OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contract_id", referencedColumnName = "contract_id", insertable = false, updatable = false)
+    private Order order;
 
     @Column(name = "source_system_id")
     private String sourceSystemId;

@@ -21,14 +21,15 @@ public class CustomRequestRepositoryImpl implements CustomRequestRepository {
 
     @Override
     public Page<Request> findRequests(String sourceSystem, Timestamp fromDate, Timestamp toDate, String businessUnit, Long contractId, Long orderId, Integer requestStatus, Pageable pageable) {
-        String jpql = "SELECT r FROM Request r " +
-                "WHERE (:sourceSystem IS NULL OR r.sourceSystemId = :sourceSystem) " +
-                "AND (:fromDate IS NULL OR r.date >= :fromDate) " +
-                "AND (:toDate IS NULL OR r.date <= :toDate) " +
-                "AND (:businessUnit IS NULL OR r.businessUnit = :businessUnit) " +
-                "AND (:contractId IS NULL OR r.contractId = :contractId) " +
-                "AND (:orderId IS NULL OR r.orderId = :orderId) " +
-                "AND (:requestStatus IS NULL OR r.requestStatus = :requestStatus)";
+        String jpql = "SELECT r FROM Request r LEFT JOIN r.order o WHERE "
+         + "(:fromDate IS NULL OR r.requestDate >= :fromDate) AND "
+         + "(:toDate IS NULL OR r.requestDate <= :toDate) AND "
+         + "(:clientCorrelationId IS NULL OR r.clientCorrelationId = :clientCorrelationId) AND "
+         + "(:sourceSystem IS NULL OR r.sourceSystem = :sourceSystem) AND "
+         + "(:businessUnit IS NULL OR r.businessUnit IN :businessUnit) AND "
+         + "(:contractId IS NULL OR r.contractId = :contractId) AND "
+         + "(:orderId IS NULL OR o.row_id = :orderId) AND "
+         + "(:requestStatus IS NULL OR r.requestStatus = :requestStatus)";
 
         Query query = entityManager.createQuery(jpql);
         
