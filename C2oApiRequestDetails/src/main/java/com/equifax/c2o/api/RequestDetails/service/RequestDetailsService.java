@@ -35,7 +35,8 @@ public class RequestDetailsService {
                 requestDetailsDTO.getContractId() != null ? Long.parseLong(requestDetailsDTO.getContractId()) : null,
                 requestDetailsDTO.getOrderId() != null ? Long.parseLong(requestDetailsDTO.getOrderId()) : null,
                 requestDetailsDTO.getRequestStatus() != null ? Integer.parseInt(requestDetailsDTO.getRequestStatus()) : null,
-                pageRequest
+                pageRequest,
+				requestDetailsDTO.getSortBy(), requestDetailsDTO.getSortOrder()
         );
 
         List<RequestDetailsDTO> requestDetails = requestsPage.stream().map(this::mapToRequestDetailsDTO).collect(Collectors.toList());

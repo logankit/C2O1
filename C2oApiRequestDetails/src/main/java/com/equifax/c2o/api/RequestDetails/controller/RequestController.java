@@ -42,7 +42,10 @@ public class RequestController {
             @RequestParam(required = false) String orderId,
             @RequestParam(required = false) String requestStatus,
             @RequestParam(defaultValue = "0") int startIndex,
-            @RequestParam(defaultValue = "20") int pageLength) {
+            @RequestParam(defaultValue = "20") int pageLength
+			@RequestParam(required = false, defaultValue = "id") String sortBy,
+            @RequestParam(required = false, defaultValue = "asc") String sortOrder
+			) {
 
         String requestCode = headerValidator.validateHeaders(clientCorrelationId, sourceSystem, businessUnit != null ? Arrays.asList(businessUnit) : null, requestStatus);
 
@@ -57,6 +60,8 @@ public class RequestController {
         requestDetailsDTO.setRequestStatus(requestCode != null ? Integer.parseInt(requestCode) : null); // Set requestCode as number
         requestDetailsDTO.setStartIndex(startIndex);
         requestDetailsDTO.setPageLength(pageLength);
+		 requestDetailsDTO.setSortBy(sortBy);
+        requestDetailsDTO.setSortOrder(sortOrder);
 
         RequestDetailsResponseDTO response = requestDetailsService.getRequestDetails(requestDetailsDTO);
 

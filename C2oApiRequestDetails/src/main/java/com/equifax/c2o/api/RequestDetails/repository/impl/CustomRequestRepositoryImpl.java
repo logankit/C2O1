@@ -29,8 +29,30 @@ public class CustomRequestRepositoryImpl implements CustomRequestRepository {
          + "(:businessUnit IS NULL OR r.businessUnit IN :businessUnit) AND "
          + "(:contractId IS NULL OR r.contractId = :contractId) AND "
          + "(:orderId IS NULL OR o.row_id = :orderId) AND "
-         + "(:requestStatus IS NULL OR r.requestStatus = :requestStatus)";
-
+         + "(:requestStatus IS NULL OR r.requestStatus = :requestStatus)"
+		 + "ORDER BY "
+         + "CASE WHEN :sortOrder = 'asc' THEN "
+         + "CASE :sortBy "
+         + "WHEN 'id' THEN r.id "
+         + "WHEN 'clientCorrelationId' THEN r.clientCorrelationId "
+         + "WHEN 'sourceSystem' THEN r.sourceSystem "
+         + "WHEN 'requestDate' THEN r.requestDate "
+         + "WHEN 'contractId' THEN r.contractId "
+         + "WHEN 'requestStatus' THEN r.requestStatus "
+         + "WHEN 'orderId' THEN o.row_id "
+         + "WHEN 'orderNumber' THEN o.orderNumber "
+         + "END ASC END, "
+         + "CASE WHEN :sortOrder = 'desc' THEN "
+         + "CASE :sortBy "
+         + "WHEN 'id' THEN r.id "
+         + "WHEN 'clientCorrelationId' THEN r.clientCorrelationId "
+         + "WHEN 'sourceSystem' THEN r.sourceSystem "
+         + "WHEN 'requestDate' THEN r.requestDate "
+         + "WHEN 'contractId' THEN r.contractId "
+         + "WHEN 'requestStatus' THEN r.requestStatus "
+         + "WHEN 'orderId' THEN o.row_id "
+         + "WHEN 'orderNumber' THEN o.orderNumber "
+         + "END DESC END"
         Query query = entityManager.createQuery(jpql);
         
         query.setParameter("sourceSystem", sourceSystem);
@@ -39,7 +61,9 @@ public class CustomRequestRepositoryImpl implements CustomRequestRepository {
         query.setParameter("businessUnit", businessUnit);
         query.setParameter("contractId", contractId);
         query.setParameter("orderId", orderId);
-        query.setParameter("requestStatus", requestStatus);
+        query.setParameter("requestStatus", requestStatus)
+		@Param("sortBy") String sortBy,
+                                       @Param("sortOrder") String sortOrder;
 
         int totalRows = query.getResultList().size();
         query.setFirstResult((int) pageable.getOffset());
