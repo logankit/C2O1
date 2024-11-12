@@ -3,7 +3,6 @@ package com.equifax.c2o.api.ruleEngine.controller;
 
 import com.equifax.c2o.api.ruleEngine.model.EfxRequest;
 import com.equifax.c2o.api.ruleEngine.model.EfxResponse;
-import com.equifax.c2o.api.ruleEngine.model.DataItem;
 import com.equifax.c2o.api.ruleEngine.service.RuleEngineService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
