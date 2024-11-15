@@ -11,6 +11,7 @@
     <properties>
         <java.version>17</java.version>
         <spring.boot.version>3.1.4</spring.boot.version>
+        <jackson.version>2.15.0</jackson.version> <!-- Added Jackson version property -->
     </properties>
 
     <dependencies>
@@ -35,7 +36,14 @@
             <version>${spring.boot.version}</version>
         </dependency>
 
-        <!-- Logback Classic with updated version to avoid policy violations -->
+        <!-- Jackson Core (upgraded to 2.15.0 to resolve policy violations) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- Logback Classic -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
@@ -58,14 +66,14 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Jakarta Validation API (for @NotBlank, @NotNull, @Valid, etc.) -->
+        <!-- Jakarta Validation API -->
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
             <version>3.0.2</version>
         </dependency>
 
-        <!-- Lombok (for @Data, @AllArgsConstructor, @RequiredArgsConstructor, etc.) -->
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -73,7 +81,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- NetworkNT JSON Schema (for JSON schema validation in RuleEngineService) -->
+        <!-- NetworkNT JSON Schema -->
         <dependency>
             <groupId>com.networknt</groupId>
             <artifactId>json-schema-validator</artifactId>
