@@ -35,7 +35,14 @@
             <version>${spring.boot.version}</version>
         </dependency>
 
-        <!-- Oracle JDBC Driver (Add this if you’re using Oracle DB) -->
+        <!-- Logback Classic with updated version to avoid policy violations -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.4.14</version>
+        </dependency>
+
+        <!-- Oracle JDBC Driver (if using Oracle DB) -->
         <dependency>
             <groupId>com.oracle.database.jdbc</groupId>
             <artifactId>ojdbc8</artifactId>
