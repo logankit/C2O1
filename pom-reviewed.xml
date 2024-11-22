@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.equifax.c2o</groupId>
-    <artifactId>c2o-validation-rule-engine</artifactId>
+    <artifactId>rule-engine</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
@@ -20,6 +20,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
             <version>${spring.boot.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.codehaus.plexus</groupId>
+                    <artifactId>plexus-archiver</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Spring Boot Starter Web for REST API support -->
@@ -27,6 +33,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
             <version>${spring.boot.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.codehaus.plexus</groupId>
+                    <artifactId>plexus-archiver</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Spring Data JPA for Database interaction -->
@@ -34,6 +46,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
             <version>${spring.boot.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.codehaus.plexus</groupId>
+                    <artifactId>plexus-archiver</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Jackson Core (upgraded to 2.15.0 to resolve policy violations) -->
