@@ -13,6 +13,22 @@
         <spring.boot.version>3.1.4</spring.boot.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- Enforce specific Logback versions -->
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>1.4.14</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
+                <version>1.4.14</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <!-- Spring Boot Starter -->
         <dependency>
@@ -27,35 +43,16 @@
             <artifactId>spring-boot-starter-web</artifactId>
             <version>${spring.boot.version}</version>
         </dependency>
-
-        <!-- Secure Logback Dependencies -->
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.4.7</version> <!-- Addressed vulnerabilities in higher versions -->
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-core</artifactId>
-            <version>1.4.7</version>
-        </dependency>
     </dependencies>
 
     <repositories>
-        <!-- Maven Central -->
         <repository>
             <id>central</id>
             <url>https://repo.maven.apache.org/maven2</url>
         </repository>
-        <!-- Custom Repository -->
-        <repository>
-            <id>efxmaven</id>
-            <url>https://<your-custom-repo-url></url>
-        </repository>
     </repositories>
 
     <pluginRepositories>
-        <!-- Maven Central for Plugins -->
         <pluginRepository>
             <id>central</id>
             <url>https://repo.maven.apache.org/maven2</url>
@@ -79,7 +76,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.2.0</version> <!-- Stable fallback version -->
+                <version>3.2.0</version>
             </plugin>
         </plugins>
     </build>
