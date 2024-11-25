@@ -23,14 +23,30 @@ public class RuleEngineController {
     public ResponseEntity<ApiResponse> executeRule(
             @RequestHeader(name = "efx-client-correlation-id") UUID correlationId,
             @Valid @RequestBody RequestPayload requestPayload) {
+        try {
+            ruleEngineService.validateInputData(requestPayload.getRuleCode(), requestPayload.getInputData());
 
-        ruleEngineService.validateInputData(requestPayload.getRuleCode(), requestPayload.getInputData());
+            ApiResponse response = new ApiResponse();
+            response.setStatus(APIConstants.SUCCESS);
+            response.setMessage("Validation successful.");
+            response.setData(Collections.emptyList());
 
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ApiResponse response = new ApiResponse();
+            response.setStatus(APIConstants.FAILED);
+            response.setMessage("Validation failed: " + e.getMessage());
+            response.setData(Collections.emptyList());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+	
+    @GetMapping(value = "/health", produces = "application/json")
+    public ResponseEntity<ApiResponse> health() {
         ApiResponse response = new ApiResponse();
         response.setStatus(APIConstants.SUCCESS);
-        response.setMessage("Validation successful.");
+        response.setMessage("Service is healthy");
         response.setData(Collections.emptyList());
-
         return ResponseEntity.ok(response);
     }
 }
