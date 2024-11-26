@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.equifax.c2o</groupId>
-    <artifactId>rule-engine</artifactId>
+    <artifactId>ngine</artifactId>
     <name>c2o-validation-rule-engine</name>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
@@ -109,49 +109,35 @@
 
     <build>
         <finalName>c2o-validation-rule-engine</finalName>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.3.0</version>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <addClasspath>true</addClasspath>
-                                <mainClass>com.equifax.c2o.api.ruleEngine.RuleEngineApplication</mainClass>
-                            </manifest>
-                        </archive>
-                    </configuration>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.codehaus.plexus</groupId>
-                            <artifactId>plexus-archiver</artifactId>
-                            <version>4.9.2</version>
-                        </dependency>
-                    </dependencies>
-                </plugin>
-            </plugins>
-        </pluginManagement>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <mainClass>com.equifax.c2o.api.ruleEngine.RuleEngineApplication</mainClass>
+                            <useUniqueVersions>false</useUniqueVersions>
+                        </manifest>
+                        <manifestEntries>
+                            <Implementation-Title>${project.name}</Implementation-Title>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+
             <!-- Spring Boot Maven Plugin -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring.boot.version}</version>
-                <executions>
-                    <execution>
-                        <id>repackage</id>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                        <configuration>
-                            <mainClass>com.equifax.c2o.api.ruleEngine.RuleEngineApplication</mainClass>
-                            <layout>JAR</layout>
-                            <classifier>exec</classifier>
-                        </configuration>
-                    </execution>
-                </executions>
+                <configuration>
+                    <mainClass>com.equifax.c2o.api.ruleEngine.RuleEngineApplication</mainClass>
+                    <skip>true</skip>
+                </configuration>
             </plugin>
 
             <!-- Compiler Plugin for Java 17 compatibility -->

@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.equifax.c2o</groupId>
-    <artifactId>rule-engine</artifactId>
+    <artifactId>c2o-validation-rule-engine</artifactId>
     <name>c2o-validation-rule-engine</name>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
