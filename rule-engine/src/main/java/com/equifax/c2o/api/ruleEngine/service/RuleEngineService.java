@@ -17,8 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,49 +33,103 @@ public class RuleEngineService {
     @Autowired
     private MoveAccountValidate moveAccountValidate;
 
-    public void validateInputData(String ruleCode, JsonNode inputData) throws Exception {
-        log.info("Validating input data for rule code: {}", ruleCode);
-        
-        RuleConfig ruleConfig = ruleConfigRepository.findByRuleCode(ruleCode)
-                .orElseThrow(() -> new ValidationException("Rule code not found: " + ruleCode));
-
-        String schemaString = ruleConfig.getInputSchema();
-        log.debug("Retrieved schema for rule code {}: {}", ruleCode, schemaString);
-
-        JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
-        JsonSchema schema = factory.getSchema(schemaString);
-
-        Set<ValidationMessage> validationResult = schema.validate(inputData);
-
-        if (!validationResult.isEmpty()) {
-            StringBuilder errors = new StringBuilder();
-            for (ValidationMessage vm : validationResult) {
-                errors.append(vm.getMessage()).append("; ");
-                log.warn("Validation error for rule {}: {}", ruleCode, vm.getMessage());
+    public void validateInputData(String ruleCode, JsonNode inputData) throws ValidationException {
+        try {
+            log.info("Starting validation for rule code: {}", ruleCode);
+            
+            if (ruleCode == null || ruleCode.trim().isEmpty()) {
+                throw new ValidationException("Rule code is required");
             }
-            throw new ValidationException(errors.toString());
-        }
+            
+            if (inputData == null) {
+                throw new ValidationException("Input data is required");
+            }
 
-        log.info("Schema validation successful for rule code: {}", ruleCode);
-        
-        // Execute business rule validation
-        BusinessRule businessRule = getBusinessRule(ruleCode);
-        if (businessRule != null) {
-            List<ErrorDetail> businessErrors = businessRule.validate(inputData.toString());
+            // Find rule configuration
+            RuleConfig ruleConfig = ruleConfigRepository.findByRuleCode(ruleCode)
+                    .orElseThrow(() -> new ValidationException("Rule code not found: " + ruleCode));
+
+            // Schema validation
+            List<String> schemaErrors = validateSchema(ruleCode, ruleConfig, inputData);
+            if (!schemaErrors.isEmpty()) {
+                String errorMessage = String.join("; ", schemaErrors);
+                log.error("Schema validation failed for rule {}: {}", ruleCode, errorMessage);
+                throw new ValidationException(errorMessage);
+            }
+            log.info("Schema validation successful for rule code: {}", ruleCode);
+
+            // Business rule validation
+            List<ErrorDetail> businessErrors = validateBusinessRule(ruleCode, inputData);
             if (!businessErrors.isEmpty()) {
-                StringBuilder errors = new StringBuilder();
-                for (ErrorDetail error : businessErrors) {
-                    errors.append(error.getMessage()).append("; ");
-                    log.warn("Business validation error for rule {}: {}", ruleCode, error.getMessage());
-                }
-                throw new ValidationException(errors.toString());
+                String errorMessage = businessErrors.stream()
+                    .map(ErrorDetail::getMessage)
+                    .collect(Collectors.joining("; "));
+                log.error("Business validation failed for rule {}: {}", ruleCode, errorMessage);
+                throw new ValidationException(errorMessage);
             }
+            
+            log.info("Validation completed successfully for rule code: {}", ruleCode);
+            
+        } catch (ValidationException ve) {
+            throw ve;
+        } catch (Exception e) {
+            log.error("Unexpected error during validation for rule {}: {}", ruleCode, e.getMessage(), e);
+            throw new ValidationException("Validation failed: " + e.getMessage());
         }
-        
-        log.info("Business validation successful for rule code: {}", ruleCode);
+    }
+
+    private List<String> validateSchema(String ruleCode, RuleConfig ruleConfig, JsonNode inputData) {
+        List<String> errors = new ArrayList<>();
+        try {
+            String schemaString = ruleConfig.getInputSchema();
+            log.debug("Retrieved schema for rule code {}: {}", ruleCode, schemaString);
+
+            JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
+            JsonSchema schema = factory.getSchema(schemaString);
+
+            Set<ValidationMessage> validationResult = schema.validate(inputData);
+            if (!validationResult.isEmpty()) {
+                for (ValidationMessage vm : validationResult) {
+                    String error = vm.getMessage();
+                    errors.add(error);
+                    log.warn("Schema validation error for rule {}: {}", ruleCode, error);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error during schema validation for rule {}: {}", ruleCode, e.getMessage(), e);
+            errors.add("Schema validation failed: " + e.getMessage());
+        }
+        return errors;
+    }
+
+    private List<ErrorDetail> validateBusinessRule(String ruleCode, JsonNode inputData) {
+        List<ErrorDetail> errors = new ArrayList<>();
+        try {
+            BusinessRule businessRule = getBusinessRule(ruleCode);
+            if (businessRule != null) {
+                // Convert JsonNode to JSON string properly using ObjectMapper
+                String inputJson = objectMapper.writeValueAsString(inputData);
+                errors = businessRule.validate(inputJson);
+                
+                if (!errors.isEmpty()) {
+                    errors.forEach(error -> 
+                        log.warn("Business validation error for rule {}: {} - {}", 
+                            ruleCode, error.getCode(), error.getMessage())
+                    );
+                }
+            } else {
+                log.info("No business validation defined for rule code: {}", ruleCode);
+            }
+        } catch (Exception e) {
+            log.error("Error during business validation for rule {}: {}", ruleCode, e.getMessage(), e);
+            errors.add(new ErrorDetail("VALIDATION_ERROR", "Business validation failed: " + e.getMessage()));
+        }
+        return errors;
     }
     
     private BusinessRule getBusinessRule(String ruleCode) {
+        if (ruleCode == null) return null;
+        
         switch (ruleCode) {
             case "MOVE_ACCOUNT_VALIDATE":
                 return moveAccountValidate;
