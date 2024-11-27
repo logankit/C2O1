@@ -3,8 +3,10 @@ package com.equifax.c2o.api.ruleEngine.businessRule;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.equifax.c2o.api.ruleEngine.model.ErrorDetail;
 import com.equifax.c2o.api.ruleEngine.model.moveaccount.types.MoveAccountRequest;
@@ -19,12 +21,19 @@ import jakarta.persistence.Query;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
+
 @Slf4j
 @Component
 public class MoveAccountValidate extends BusinessRule {
 
     @PersistenceContext
     private EntityManager em;
+
+    private static final String ACCOUNT_VERSION_CURRENT = "CURRENT";
+    private static final String ACCOUNT_TYPE_SHIPTO = "SHIP-TO";
+    private static final String ACCOUNT_TYPE_BILLTO = "BILL-TO";
+    private static final String ACTIVE_STATUS = "27";
 
     @Override
     public String getRuleName() {
@@ -48,14 +57,23 @@ public class MoveAccountValidate extends BusinessRule {
             return retVal;
         }
 
+        // Validate contracts are different
+        if (requestInput.getSourceContractId().equals(requestInput.getTargetContractId())) {
+            log.error("Source and Target Contract IDs are the same: {}", requestInput.getSourceContractId());
+            retVal.add(new ErrorDetail("EFX_SAME_CONTRACT", "Source and Target Contract IDs cannot be the same"));
+            return retVal;
+        }
+
         List<String> sourceShiptos = new ArrayList<String>();
         List<String> targetBillTos = new ArrayList<String>();
         if(requestInput.getShipTos() != null && !requestInput.getShipTos().isEmpty()) {
             requestInput.getShipTos().forEach(shipto -> {
                 if (shipto.getObaNumbers() != null) {
-                    sourceShiptos.addAll(shipto.getObaNumbers());
+                    sourceShiptos.addAll(shipto.getObaNumbers().stream()
+                        .filter(oba -> oba != null && !oba.trim().isEmpty())
+                        .collect(Collectors.toList()));
                 }
-                if (shipto.getTargetBillTo() != null) {
+                if (shipto.getTargetBillTo() != null && !shipto.getTargetBillTo().trim().isEmpty()) {
                     targetBillTos.add(shipto.getTargetBillTo());
                 }
             });
@@ -65,7 +83,9 @@ public class MoveAccountValidate extends BusinessRule {
 
         List<String> sourceBillTos = new ArrayList<String>();
         if(requestInput.getBillTos() != null && !requestInput.getBillTos().isEmpty()) {
-            sourceBillTos.addAll(requestInput.getBillTos());
+            sourceBillTos.addAll(requestInput.getBillTos().stream()
+                .filter(billTo -> billTo != null && !billTo.trim().isEmpty())
+                .collect(Collectors.toList()));
             log.info("Processing billTos - Source BillTos: {}", sourceBillTos);
         }
 
@@ -76,26 +96,116 @@ public class MoveAccountValidate extends BusinessRule {
             return retVal;
         }
 
+        // Validate target billtos are provided if shiptos are present
+        if (!sourceShiptos.isEmpty() && targetBillTos.isEmpty()) {
+            log.error("Target BillTos are missing for ShipTos");
+            retVal.add(new ErrorDetail("EFX_MISSING_TARGET_BILLTO", 
+                "Target BillTo must be provided for each ShipTo"));
+            return retVal;
+        }
+
+        // Validate all accounts exist in c2o_account table
+        List<String> allAccounts = new ArrayList<>();
+        allAccounts.addAll(sourceShiptos);
+        allAccounts.addAll(sourceBillTos);
+        allAccounts.addAll(targetBillTos);
+
+        if (!allAccounts.isEmpty()) {
+            String existenceQuery = "SELECT a.oba_number, a.account_type FROM c2o_account a "
+                + "WHERE a.account_version = :version "
+                + "AND a.oba_number IN :p_oba_list";
+            
+            log.debug("Executing account existence query: {}", existenceQuery);
+            log.debug("Query parameters - p_oba_list: {}", allAccounts);
+            
+            Query query = em.createNativeQuery(existenceQuery);
+            query.setParameter("version", ACCOUNT_VERSION_CURRENT);
+            query.setParameter("p_oba_list", allAccounts);
+            
+            List<Object[]> existingAccounts = query.getResultList();
+            Map<String, String> accountTypes = new HashMap<>();
+            existingAccounts.forEach(row -> accountTypes.put((String)row[0], (String)row[1]));
+            
+            // Find accounts that don't exist
+            List<String> nonExistentAccounts = allAccounts.stream()
+                .filter(acc -> !accountTypes.containsKey(acc))
+                .collect(Collectors.toList());
+            
+            if (!nonExistentAccounts.isEmpty()) {
+                log.warn("Found non-existent accounts: {}", nonExistentAccounts);
+                nonExistentAccounts.forEach(acc -> {
+                    ErrorDetail error = new ErrorDetail("EFX_ACCOUNT_NOT_FOUND", 
+                        "Account " + acc + " does not exist");
+                    retVal.add(error);
+                });
+                return retVal;
+            }
+            
+            // Validate account types
+            List<String> invalidShipTos = sourceShiptos.stream()
+                .filter(acc -> !ACCOUNT_TYPE_SHIPTO.equals(accountTypes.get(acc)))
+                .collect(Collectors.toList());
+                
+            if (!invalidShipTos.isEmpty()) {
+                log.warn("Found non-shipto accounts in shipto list: {}", invalidShipTos);
+                invalidShipTos.forEach(acc -> {
+                    ErrorDetail error = new ErrorDetail("EFX_INVALID_ACCOUNT_TYPE", 
+                        "Account " + acc + " is not a ShipTo account");
+                    retVal.add(error);
+                });
+                return retVal;
+            }
+            
+            List<String> invalidBillTos = Stream.concat(sourceBillTos.stream(), targetBillTos.stream())
+                .filter(acc -> !ACCOUNT_TYPE_BILLTO.equals(accountTypes.get(acc)))
+                .collect(Collectors.toList());
+                
+            if (!invalidBillTos.isEmpty()) {
+                log.warn("Found non-billto accounts in billto list: {}", invalidBillTos);
+                invalidBillTos.forEach(acc -> {
+                    ErrorDetail error = new ErrorDetail("EFX_INVALID_ACCOUNT_TYPE", 
+                        "Account " + acc + " is not a BillTo account");
+                    retVal.add(error);
+                });
+                return retVal;
+            }
+            
+            log.info("All accounts exist and have correct types");
+        }
+
         // validate source shiptos are active
         if (!sourceShiptos.isEmpty()) {
-            String queryStr = "Select a.oba_number from c2o_account a where a.account_version = 'CURRENT' "
-                + " and (a.account_status != '27' AND a.account_type = 'SHIP-TO') "
+            String queryStr = "Select a.oba_number from c2o_account a where a.account_version = :version "
+                + " and a.account_status = :status "
+                + " and a.account_type = :type "
                 + " and a.oba_number in :p_oba_list ";
             log.debug("Executing active shiptos query: {}", queryStr);
-            log.debug("Query parameters - p_oba_list: {}", sourceShiptos);
+            log.debug("Query parameters - p_oba_list: {}, status: {}, type: {}", 
+                sourceShiptos, ACTIVE_STATUS, ACCOUNT_TYPE_SHIPTO);
             
             Query query = em.createNativeQuery(queryStr);
+            query.setParameter("version", ACCOUNT_VERSION_CURRENT);
+            query.setParameter("status", ACTIVE_STATUS);
+            query.setParameter("type", ACCOUNT_TYPE_SHIPTO);
             query.setParameter("p_oba_list", sourceShiptos);
-            List<?> inactiveShiptos = query.getResultList();
+            
+            List<String> activeShiptos = query.getResultList();
+            List<String> inactiveShiptos = sourceShiptos.stream()
+                .filter(shipto -> !activeShiptos.contains(shipto))
+                .collect(Collectors.toList());
+            
             log.info("Found {} inactive shiptos", inactiveShiptos.size());
             
-            inactiveShiptos.forEach(acc -> {
-                String obaNumber = (String)acc;
+            inactiveShiptos.forEach(obaNumber -> {
                 log.warn("Inactive shipto found: {}", obaNumber);
                 ErrorDetail error = new ErrorDetail("EFX_NOT_AN_ACTIVE_SHIPTO", 
                     obaNumber + " is not an active Shipto");
                 retVal.add(error);
             });
+            
+            if (!inactiveShiptos.isEmpty()) {
+                return retVal;
+            }
         }
 
         // moving to a different BDOM
@@ -103,18 +213,19 @@ public class MoveAccountValidate extends BusinessRule {
             requestInput.getShipTos().forEach(shipto -> {
                 if (shipto.getObaNumbers() != null && !shipto.getObaNumbers().isEmpty() 
                     && shipto.getTargetBillTo() != null) {
-                    String queryStr2 = "Select a.oba_number from c2o_account a, c2o_account b, c2o_account t "
-                        + " where a.account_version = 'CURRENT' "
+                    String queryStr2 = "Select a.oba_number from c2o_account a "
+                        + " join c2o_account b on a.parent_account_id = b.row_id "
+                        + " join c2o_account t on t.oba_number = :p_target_billto "
+                        + " where a.account_version = :version "
+                        + " and t.account_version = :version "
                         + " and a.oba_number in :p_oba_list "
-                        + " and a.parent_account_id = b.row_id "
-                        + " and t.oba_number = :p_target_billto "
-                        + " and t.account_version = 'CURRENT' "
                         + " and b.billing_day_of_month != t.billing_day_of_month";
                     log.debug("Executing BDOM validation query: {}", queryStr2);
                     log.debug("Query parameters - p_oba_list: {}, p_target_billto: {}", 
                              shipto.getObaNumbers(), shipto.getTargetBillTo());
                     
                     Query query2 = em.createNativeQuery(queryStr2);
+                    query2.setParameter("version", ACCOUNT_VERSION_CURRENT);
                     query2.setParameter("p_oba_list", shipto.getObaNumbers());
                     query2.setParameter("p_target_billto", shipto.getTargetBillTo());
                     List<?> differentBdomShiptos = query2.getResultList();
@@ -129,6 +240,10 @@ public class MoveAccountValidate extends BusinessRule {
                     });
                 }
             });
+            
+            if (!retVal.isEmpty()) {
+                return retVal;
+            }
         }
 
         // shipto move to more than one billto
@@ -144,22 +259,24 @@ public class MoveAccountValidate extends BusinessRule {
                     e + " cannot be moved to more than one Billto");
                 retVal.add(error);
             });
+            return retVal;
         }
 
         // shipto and billto can't be moved together
         if (!sourceShiptos.isEmpty() && !sourceBillTos.isEmpty()) {
-            String queryStr3 = "Select a.oba_number from c2o_account a, c2o_account b "
-                + " where a.account_version = 'CURRENT' "
+            String queryStr3 = "Select a.oba_number from c2o_account a "
+                + " join c2o_account b on a.parent_account_id = b.row_id "
+                + " where a.account_version = :version "
                 + " and a.oba_number in :p_oba_list "
-                + " and a.parent_account_id = b.row_id "
                 + " and exists (select 1 from c2o_account bb "
-                + "             where bb.account_version = 'CURRENT' "
+                + "             where bb.account_version = :version "
                 + "             and bb.oba_number = b.oba_number "
                 + "             and bb.oba_number in :p_billto_list)";
             log.debug("Executing shipto-billto validation query: {}", queryStr3);
             log.debug("Query parameters - p_oba_list: {}, p_billto_list: {}", sourceShiptos, sourceBillTos);
             
             Query query3 = em.createNativeQuery(queryStr3);
+            query3.setParameter("version", ACCOUNT_VERSION_CURRENT);
             query3.setParameter("p_oba_list", sourceShiptos);
             query3.setParameter("p_billto_list", sourceBillTos);
             List<?> invalidMoves = query3.getResultList();
