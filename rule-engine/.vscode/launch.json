@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Rule Engine",
+            "request": "launch",
+            "mainClass": "com.equifax.c2o.api.ruleEngine.RuleEngineApplication",
+            "projectName": "rule-engine",
+            "env": {
+                "SPRING_PROFILES_ACTIVE": "local"
+            }
+        }
+    ]
+}

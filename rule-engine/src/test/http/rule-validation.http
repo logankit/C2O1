@@ -1,0 +1,45 @@
+### Health Check
+GET http://localhost:8081/v1/execute/health
+Accept: application/json
+X-Correlation-ID: {{$guid}}
+
+### Valid Rule Validation
+POST http://localhost:8081/v1/execute
+Content-Type: application/json
+Accept: application/json
+X-Correlation-ID: {{$guid}}
+
+{
+  "ruleCode": "MOVE_ACCOUNT_VALIDATION",
+  "inputData": {
+    "sourceContract": 12345,
+    "targetContract": 67890,
+    "shipTos": [
+      {
+        "obaNumbers": ["OBA123", "OBA456"],
+        "targetBillTo": "BILL789"
+      }
+    ],
+    "billTos": ["BILL123", "BILL456"]
+  }
+}
+
+### Invalid Rule Validation (Missing targetContract)
+POST http://localhost:8081/v1/execute
+Content-Type: application/json
+Accept: application/json
+X-Correlation-ID: {{$guid}}
+
+{
+  "ruleCode": "MOVE_ACCOUNT_VALIDATION",
+  "inputData": {
+    "sourceContract": 12345,
+    "shipTos": [
+      {
+        "obaNumbers": ["OBA123", "OBA456"],
+        "targetBillTo": "BILL789"
+      }
+    ],
+    "billTos": ["BILL123", "BILL456"]
+  }
+}

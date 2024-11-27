@@ -1,152 +1,398 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-<groupId>org.springframework.boot</groupId>
-<artifactId>spring-boot-starter-parent</artifactId>
-<version>3.3.5</version>
-<relativePath /> <!-- lookup parent from repository -->
-    </parent>
-    <groupId>com.equifax.c2o</groupId>
-    <artifactId>c2o-validation-rule-engine</artifactId>
-    <name>c2o-validation-rule-engine</name>
-    <version>0.0.1-SNAPSHOT</version>
-    <packaging>jar</packaging>
+<?xml version="1.0" ?>
+<ns0:project xmlns:ns0="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  
+    
+  <ns0:modelVersion>4.0.0</ns0:modelVersion>
+  
+    
+  <ns0:parent>
+    
 
-    <properties>
-        <java.version>17</java.version>
-        <spring.boot.version>3.1.4</spring.boot.version>
-        <jackson.version>2.15.0</jackson.version>
-    </properties>
+    <ns0:groupId>org.springframework.boot</ns0:groupId>
+    
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.codehaus.plexus</groupId>
-                <artifactId>plexus-archiver</artifactId>
-                <version>4.9.2</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+    <ns0:artifactId>spring-boot-starter-parent</ns0:artifactId>
+    
 
-    <dependencies>
-        <!-- Spring Boot Starter -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-            <version>${spring.boot.version}</version>
-        </dependency>
+    <ns0:version>3.3.5</ns0:version>
+    
 
-        <!-- Spring Boot Starter Web for REST API support -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <version>${spring.boot.version}</version>
-        </dependency>
+    <ns0:relativePath/>
+     
+    
+  </ns0:parent>
+  
+    
+  <ns0:groupId>com.equifax.c2o</ns0:groupId>
+  
+    
+  <ns0:artifactId>c2o-validation-rule-engine</ns0:artifactId>
+  
+    
+  <ns0:name>c2o-validation-rule-engine</ns0:name>
+  
+    
+  <ns0:version>0.0.1-SNAPSHOT</ns0:version>
+  
+    
+  <ns0:packaging>jar</ns0:packaging>
+  
 
-        <!-- Spring Data JPA for Database interaction -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-            <version>${spring.boot.version}</version>
-        </dependency>
+    
+  <ns0:properties>
+    
+        
+    <ns0:java.version>17</ns0:java.version>
+    
+        
+    <ns0:spring.boot.version>3.1.4</ns0:spring.boot.version>
+    
+        
+    <ns0:jackson.version>2.15.0</ns0:jackson.version>
+    
+    
+  </ns0:properties>
+  
 
-        <!-- Jackson Core (upgraded to 2.15.0 to resolve policy violations) -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
+    
+  <ns0:dependencyManagement>
+    
+        
+    <ns0:dependencies>
+      
+            
+      <ns0:dependency>
+        
+                
+        <ns0:groupId>org.codehaus.plexus</ns0:groupId>
+        
+                
+        <ns0:artifactId>plexus-archiver</ns0:artifactId>
+        
+                
+        <ns0:version>4.9.2</ns0:version>
+        
+            
+      </ns0:dependency>
+      
+        
+    </ns0:dependencies>
+    
+    
+  </ns0:dependencyManagement>
+  
 
-        <!-- Logback Classic -->
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.4.14</version>
-        </dependency>
+    
+  <ns0:dependencies>
+    
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>org.springframework.boot</ns0:groupId>
+      
+            
+      <ns0:artifactId>spring-boot-starter</ns0:artifactId>
+      
+            
+      <ns0:version>${spring.boot.version}</ns0:version>
+      
+        
+    </ns0:dependency>
+    
 
-        <!-- Oracle JDBC Driver (if using Oracle Database) -->
-        <dependency>
-            <groupId>com.oracle.database.jdbc</groupId>
-            <artifactId>ojdbc8</artifactId>
-            <version>19.8.0.0</version>
-            <scope>runtime</scope>
-        </dependency>
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>org.springframework.boot</ns0:groupId>
+      
+            
+      <ns0:artifactId>spring-boot-starter-web</ns0:artifactId>
+      
+            
+      <ns0:version>${spring.boot.version}</ns0:version>
+      
+        
+    </ns0:dependency>
+    
 
-        <!-- Spring Boot Starter Test for Testing support -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <version>${spring.boot.version}</version>
-            <scope>test</scope>
-        </dependency>
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>org.springframework.boot</ns0:groupId>
+      
+            
+      <ns0:artifactId>spring-boot-starter-data-jpa</ns0:artifactId>
+      
+            
+      <ns0:version>${spring.boot.version}</ns0:version>
+      
+        
+    </ns0:dependency>
+    
 
-        <!-- Jakarta Validation API -->
-        <dependency>
-            <groupId>jakarta.validation</groupId>
-            <artifactId>jakarta.validation-api</artifactId>
-            <version>3.0.2</version>
-        </dependency>
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>com.fasterxml.jackson.core</ns0:groupId>
+      
+            
+      <ns0:artifactId>jackson-core</ns0:artifactId>
+      
+            
+      <ns0:version>${jackson.version}</ns0:version>
+      
+        
+    </ns0:dependency>
+    
 
-        <!-- Lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.26</version>
-            <scope>provided</scope>
-        </dependency>
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>ch.qos.logback</ns0:groupId>
+      
+            
+      <ns0:artifactId>logback-classic</ns0:artifactId>
+      
+            
+      <ns0:version>1.4.14</ns0:version>
+      
+        
+    </ns0:dependency>
+    
 
-        <!-- NetworkNT JSON Schema -->
-        <dependency>
-            <groupId>com.networknt</groupId>
-            <artifactId>json-schema-validator</artifactId>
-            <version>1.0.76</version>
-        </dependency>
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>com.oracle.database.jdbc</ns0:groupId>
+      
+            
+      <ns0:artifactId>ojdbc8</ns0:artifactId>
+      
+            
+      <ns0:version>19.8.0.0</ns0:version>
+      
+            
+      <ns0:scope>runtime</ns0:scope>
+      
+        
+    </ns0:dependency>
+    
 
-        <!-- Plexus Archiver (upgraded to 4.9.2 to resolve quarantine issues) -->
-        <dependency>
-            <groupId>org.codehaus.plexus</groupId>
-            <artifactId>plexus-archiver</artifactId>
-            <version>4.9.2</version>
-        </dependency>
-    </dependencies>
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>org.springframework.boot</ns0:groupId>
+      
+            
+      <ns0:artifactId>spring-boot-starter-test</ns0:artifactId>
+      
+            
+      <ns0:version>${spring.boot.version}</ns0:version>
+      
+            
+      <ns0:scope>test</ns0:scope>
+      
+        
+    </ns0:dependency>
+    
 
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.3.0</version>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.codehaus.plexus</groupId>
-                            <artifactId>plexus-archiver</artifactId>
-                            <version>4.9.2</version>
-                        </dependency>
-                    </dependencies>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-        <plugins>
-            <!-- Spring Boot Maven Plugin -->
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>${spring.boot.version}</version>
-            </plugin>
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>jakarta.validation</ns0:groupId>
+      
+            
+      <ns0:artifactId>jakarta.validation-api</ns0:artifactId>
+      
+            
+      <ns0:version>3.0.2</ns0:version>
+      
+        
+    </ns0:dependency>
+    
 
-            <!-- Compiler Plugin for Java 17 compatibility -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-</project>
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>org.projectlombok</ns0:groupId>
+      
+            
+      <ns0:artifactId>lombok</ns0:artifactId>
+      
+            
+      <ns0:version>1.18.26</ns0:version>
+      
+            
+      <ns0:scope>provided</ns0:scope>
+      
+        
+    </ns0:dependency>
+    
+
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>com.networknt</ns0:groupId>
+      
+            
+      <ns0:artifactId>json-schema-validator</ns0:artifactId>
+      
+            
+      <ns0:version>1.0.76</ns0:version>
+      
+        
+    </ns0:dependency>
+    
+
+        
+        
+    <ns0:dependency>
+      
+            
+      <ns0:groupId>org.codehaus.plexus</ns0:groupId>
+      
+            
+      <ns0:artifactId>plexus-archiver</ns0:artifactId>
+      
+            
+      <ns0:version>4.9.2</ns0:version>
+      
+        
+    </ns0:dependency>
+    
+    
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate-core</artifactId>
+      <version>5.6.14.Final</version>
+    </dependency>
+  </ns0:dependencies>
+  
+
+    
+  <ns0:build>
+    
+        
+    <ns0:pluginManagement>
+      
+            
+      <ns0:plugins>
+        
+                
+        <ns0:plugin>
+          
+                    
+          <ns0:groupId>org.apache.maven.plugins</ns0:groupId>
+          
+                    
+          <ns0:artifactId>maven-jar-plugin</ns0:artifactId>
+          
+                    
+          <ns0:version>3.3.0</ns0:version>
+          
+                    
+          <ns0:dependencies>
+            
+                        
+            <ns0:dependency>
+              
+                            
+              <ns0:groupId>org.codehaus.plexus</ns0:groupId>
+              
+                            
+              <ns0:artifactId>plexus-archiver</ns0:artifactId>
+              
+                            
+              <ns0:version>4.9.2</ns0:version>
+              
+                        
+            </ns0:dependency>
+            
+                    
+          </ns0:dependencies>
+          
+                
+        </ns0:plugin>
+        
+            
+      </ns0:plugins>
+      
+        
+    </ns0:pluginManagement>
+    
+        
+    <ns0:plugins>
+      
+            
+            
+      <ns0:plugin>
+        
+                
+        <ns0:groupId>org.springframework.boot</ns0:groupId>
+        
+                
+        <ns0:artifactId>spring-boot-maven-plugin</ns0:artifactId>
+        
+                
+        <ns0:version>${spring.boot.version}</ns0:version>
+        
+            
+      </ns0:plugin>
+      
+
+            
+            
+      <ns0:plugin>
+        
+                
+        <ns0:groupId>org.apache.maven.plugins</ns0:groupId>
+        
+                
+        <ns0:artifactId>maven-compiler-plugin</ns0:artifactId>
+        
+                
+        <ns0:version>3.8.1</ns0:version>
+        
+                
+        <ns0:configuration>
+          
+                    
+          <ns0:source>${java.version}</ns0:source>
+          
+                    
+          <ns0:target>${java.version}</ns0:target>
+          
+                
+        </ns0:configuration>
+        
+            
+      </ns0:plugin>
+      
+        
+    </ns0:plugins>
+    
+    
+  </ns0:build>
+  
+
+</ns0:project>

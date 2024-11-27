@@ -1,0 +1,37 @@
+Manifest-Version: 1.0
+Created-By: Maven JAR Plugin 3.3.0
+Build-Jdk-Spec: 17
+Class-Path: spring-boot-starter-3.1.4.jar spring-boot-3.1.4.jar spring-c
+ ontext-6.0.12.jar spring-boot-autoconfigure-3.1.4.jar spring-boot-start
+ er-logging-3.1.4.jar log4j-to-slf4j-2.20.0.jar log4j-api-2.20.0.jar jul
+ -to-slf4j-2.0.9.jar jakarta.annotation-api-2.1.1.jar spring-core-6.0.12
+ .jar spring-jcl-6.0.12.jar snakeyaml-1.33.jar spring-boot-starter-web-3
+ .1.4.jar spring-boot-starter-json-3.1.4.jar jackson-datatype-jdk8-2.15.
+ 2.jar jackson-datatype-jsr310-2.15.2.jar jackson-module-parameter-names
+ -2.15.2.jar spring-boot-starter-tomcat-3.1.4.jar tomcat-embed-core-10.1
+ .13.jar tomcat-embed-el-10.1.13.jar tomcat-embed-websocket-10.1.13.jar 
+ spring-web-6.0.12.jar spring-beans-6.0.12.jar micrometer-observation-1.
+ 10.11.jar micrometer-commons-1.10.11.jar spring-webmvc-6.0.12.jar sprin
+ g-aop-6.0.12.jar spring-expression-6.0.12.jar spring-boot-starter-data-
+ jpa-3.1.4.jar spring-boot-starter-aop-3.1.4.jar aspectjweaver-1.9.20.ja
+ r spring-boot-starter-jdbc-3.1.4.jar HikariCP-5.0.1.jar spring-jdbc-6.0
+ .12.jar hibernate-core-6.2.9.Final.jar jakarta.persistence-api-3.1.0.ja
+ r jakarta.transaction-api-2.0.1.jar jboss-logging-3.5.0.Final.jar hiber
+ nate-commons-annotations-6.0.6.Final.jar jandex-3.0.5.jar classmate-1.5
+ .1.jar byte-buddy-1.14.7.jar jaxb-runtime-4.0.2.jar jaxb-core-4.0.2.jar
+  angus-activation-2.0.0.jar txw2-4.0.2.jar istack-commons-runtime-4.1.1
+ .jar jakarta.inject-api-2.0.1.jar antlr4-runtime-4.10.1.jar spring-data
+ -jpa-3.1.4.jar spring-data-commons-3.1.4.jar spring-orm-6.0.12.jar spri
+ ng-tx-6.0.12.jar spring-aspects-6.0.12.jar jackson-core-2.15.0.jar logb
+ ack-classic-1.4.14.jar logback-core-1.4.14.jar slf4j-api-2.0.7.jar ojdb
+ c8-19.8.0.0.jar jakarta.xml.bind-api-4.0.1.jar jakarta.activation-api-2
+ .1.2.jar jakarta.validation-api-3.0.2.jar json-schema-validator-1.0.76.
+ jar jackson-databind-2.14.0.jar jackson-annotations-2.14.0.jar commons-
+ lang3-3.12.0.jar itu-1.7.0.jar plexus-archiver-4.9.2.jar javax.inject-1
+ .jar plexus-utils-4.0.0.jar plexus-io-3.4.2.jar commons-io-2.15.1.jar c
+ ommons-compress-1.26.1.jar commons-codec-1.16.1.jar snappy-0.4.jar xz-1
+ .9.jar zstd-jni-1.5.5-11.jar
+Main-Class: com.equifax.c2o.api.ruleEngine.RuleEngineApplication
+Implementation-Title: c2o-validation-rule-engine
+Implementation-Version: 0.0.1-SNAPSHOT
+
