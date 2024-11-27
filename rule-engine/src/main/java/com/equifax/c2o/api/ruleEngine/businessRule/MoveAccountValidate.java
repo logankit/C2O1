@@ -7,8 +7,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.equifax.c2o.api.ruleEngine.model.ErrorDetail;
-import com.equifax.c2o.api.ruleEngine.moveaccount.types.MoveAccountRequest;
-import com.equifax.c2o.api.ruleEngine.moveaccount.types.ShipTo;
+import com.equifax.c2o.api.ruleEngine.model.moveaccount.types.MoveAccountRequest;
+import com.equifax.c2o.api.ruleEngine.model.moveaccount.types.ShipTo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -62,22 +62,21 @@ if(!requestInput.getShipTos().isEmpty()) {
 requestInput.getShipTos().forEach(shipto ->{
 String queryStr2 = "Select a.oba_number from c2o_account a, c2o_account b, c2o_account bb"
 + " where a.account_version = 'CURRENT' and a.oba_number in :p_oba_list "
-+ " a.parent_account_id = b.row_id and bb.account_version = 'CURRENT' "
++ " and a.parent_account_id = b.row_id and bb.account_version = 'CURRENT' "
 + " and b.billing_day_of_month != bb.billing_day_of_month";
 Query query2 = em.createNativeQuery(queryStr2);
 query2.setParameter("p_oba_list", sourceShiptos);
 query2.getResultList().forEach(acc -> {
-ErrorDetail error = new ErrorDetail("EFX_SHIPTO_MOVING_TO_DIFFERNT_BDOM", (String)acc + " cannot be moved to a bill to with different BDOM");
+ErrorDetail error = new ErrorDetail("EFX_SHIPTO_MOVING_TO_DIFFERENT_BDOM", (String)acc + " cannot be moved to a bill to with different BDOM");
 retVal.add(error);
 });
 });
-}
 
 //shipto move to more than one billto
 Set<String> uniqueShiptos = new HashSet<String>();
 sourceShiptos.stream().filter(e -> !uniqueShiptos.add(e))
 .forEach(e-> {
-ErrorDetail error = new ErrorDetail("EFX_SHIPTO_MOVED_MORE_THAN_ONE_BILLTO", e + " cannot be moved to move than Billto");
+ErrorDetail error = new ErrorDetail("EFX_SHIPTO_MOVED_MORE_THAN_ONE_BILLTO", e + " cannot be moved to more than one Billto");
 retVal.add(error);
 });
 
@@ -92,7 +91,6 @@ query3.getResultList().forEach(acc -> {
 ErrorDetail error = new ErrorDetail("EFX_SHIPTO_BILLTO_CANT_MOVE_TOGETHER", "Shipto "+ (String)acc + " and its billto cannot be moved together");
 retVal.add(error);
 });
-
 
 // source billtos active
 String queryStr4 = "Select a.oba_number from c2o_account a where a.account_version = 'CURRENT' "
@@ -110,8 +108,8 @@ String queryStr5 = "Select a.oba_number from c2o_account a where a.account_versi
 + " and (a.account_status != '27' or a.account_type != 'BILL-TO')"
 + " and a.oba_number in :p_oba_list ";
 Query query5 = em.createNativeQuery(queryStr5);
-query4.setParameter("p_oba_list", targetBillTos);
-query4.getResultList().forEach(acc -> {
+query5.setParameter("p_oba_list", targetBillTos);
+query5.getResultList().forEach(acc -> {
 ErrorDetail error = new ErrorDetail("EFX_NOT_AN_ACTIVE_BILL_TO", (String)acc + " is not an active Billto");
 retVal.add(error);
 });
