@@ -37,6 +37,13 @@
             <artifactId>spring-boot-starter</artifactId>
             <version>${spring.boot.version}</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.hibernate/hibernate-core -->
+<dependency>
+   <groupId>org.hibernate</groupId>
+   <artifactId>hibernate-core</artifactId>
+   <version>6.2.11.Final</version>
+</dependency>
+       
 
         <!-- Spring Boot Starter Web for REST API support -->
         <dependency>
