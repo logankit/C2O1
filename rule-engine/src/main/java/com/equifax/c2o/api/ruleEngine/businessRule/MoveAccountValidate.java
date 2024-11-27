@@ -16,7 +16,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+import org.springframework.stereotype.Component;
 
+@Component
 public class MoveAccountValidate extends BusinessRule {
 
     @PersistenceContext
