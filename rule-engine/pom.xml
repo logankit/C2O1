@@ -40,7 +40,7 @@
 
         <!-- Hibernate Core -->
         <dependency>
-            <groupId>org.hibernate</groupId>
+            <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-core</artifactId>
             <version>6.2.11.Final</version>
         </dependency>
@@ -76,11 +76,16 @@
             <version>${jackson.version}</version>
         </dependency>
 
-        <!-- Logback Classic -->
+        <!-- Logback Dependencies -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.4.14</version>
+            <version>1.4.11</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>1.4.11</version>
         </dependency>
 
         <!-- Oracle JDBC Driver -->
