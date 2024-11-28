@@ -2,6 +2,7 @@ package com.equifax.c2o.api.ruleEngine.service;
 
 import com.equifax.c2o.api.ruleEngine.businessRule.BusinessRule;
 import com.equifax.c2o.api.ruleEngine.businessRule.MoveAccountValidate;
+import com.equifax.c2o.api.ruleEngine.businessRule.MoveContractValidate;
 import com.equifax.c2o.api.ruleEngine.entity.RuleConfig;
 import com.equifax.c2o.api.ruleEngine.exception.ValidationException;
 import com.equifax.c2o.api.ruleEngine.model.ErrorDetail;
@@ -18,9 +19,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import javax.annotation.PostConstruct;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +37,18 @@ public class RuleEngineService {
     
     @Autowired
     private MoveAccountValidate moveAccountValidate;
+
+    @Autowired
+    private MoveContractValidate moveContractValidate;
+
+    private Map<String, BusinessRule> ruleMap;
+
+    @PostConstruct
+    private void init() {
+        ruleMap = new HashMap<>();
+        ruleMap.put(moveAccountValidate.getRuleName(), moveAccountValidate);
+        ruleMap.put(moveContractValidate.getRuleName(), moveContractValidate);
+    }
 
     public void validateInputData(String ruleCode, JsonNode inputData) throws ValidationException {
         try {
@@ -130,12 +147,6 @@ public class RuleEngineService {
     private BusinessRule getBusinessRule(String ruleCode) {
         if (ruleCode == null) return null;
         
-        switch (ruleCode) {
-            case "MOVE_ACCOUNT_VALIDATE":
-                return moveAccountValidate;
-            default:
-                log.warn("No business rule implementation found for rule code: {}", ruleCode);
-                return null;
-        }
+        return ruleMap.get(ruleCode);
     }
 }

@@ -49,19 +49,20 @@ public class MoveAccountValidate extends BusinessRule {
                 requestInput.getSourceContractId(), requestInput.getTargetContractId());
 
         List<ErrorDetail> retVal = new ArrayList<ErrorDetail>();
+        boolean hasValidationErrors = false;
 
         // Validate required fields
         if (requestInput.getSourceContractId() == null || requestInput.getTargetContractId() == null) {
             log.error("Source or Target Contract ID is missing");
             retVal.add(new ErrorDetail("EFX_MISSING_CONTRACT_ID", "Source and Target Contract IDs are required"));
-            return retVal;
+            hasValidationErrors = true;
         }
 
         // Validate contracts are different
         if (requestInput.getSourceContractId().equals(requestInput.getTargetContractId())) {
             log.error("Source and Target Contract IDs are the same: {}", requestInput.getSourceContractId());
             retVal.add(new ErrorDetail("EFX_SAME_CONTRACT", "Source and Target Contract IDs cannot be the same"));
-            return retVal;
+            hasValidationErrors = true;
         }
 
         List<String> sourceShiptos = new ArrayList<String>();
@@ -93,7 +94,7 @@ public class MoveAccountValidate extends BusinessRule {
         if (sourceShiptos.isEmpty() && sourceBillTos.isEmpty()) {
             log.warn("No accounts to process in the request");
             retVal.add(new ErrorDetail("EFX_NO_ACCOUNTS", "No accounts provided for processing"));
-            return retVal;
+            hasValidationErrors = true;
         }
 
         // Validate target billtos are provided if shiptos are present
@@ -101,7 +102,7 @@ public class MoveAccountValidate extends BusinessRule {
             log.error("Target BillTos are missing for ShipTos");
             retVal.add(new ErrorDetail("EFX_MISSING_TARGET_BILLTO", 
                 "Target BillTo must be provided for each ShipTo"));
-            return retVal;
+            hasValidationErrors = true;
         }
 
         // Validate all accounts exist in c2o_account table
@@ -138,7 +139,7 @@ public class MoveAccountValidate extends BusinessRule {
                         "Account " + acc + " does not exist");
                     retVal.add(error);
                 });
-                return retVal;
+                hasValidationErrors = true;
             }
             
             // Validate account types
@@ -153,7 +154,7 @@ public class MoveAccountValidate extends BusinessRule {
                         "Account " + acc + " is not a ShipTo account");
                     retVal.add(error);
                 });
-                return retVal;
+                hasValidationErrors = true;
             }
             
             List<String> invalidBillTos = Stream.concat(sourceBillTos.stream(), targetBillTos.stream())
@@ -167,7 +168,7 @@ public class MoveAccountValidate extends BusinessRule {
                         "Account " + acc + " is not a BillTo account");
                     retVal.add(error);
                 });
-                return retVal;
+                hasValidationErrors = true;
             }
             
             log.info("All accounts exist and have correct types");
@@ -204,7 +205,7 @@ public class MoveAccountValidate extends BusinessRule {
             });
             
             if (!inactiveShiptos.isEmpty()) {
-                return retVal;
+                hasValidationErrors = true;
             }
         }
 
@@ -242,7 +243,7 @@ public class MoveAccountValidate extends BusinessRule {
             });
             
             if (!retVal.isEmpty()) {
-                return retVal;
+                hasValidationErrors = true;
             }
         }
 
@@ -259,7 +260,7 @@ public class MoveAccountValidate extends BusinessRule {
                     e + " cannot be moved to more than one Billto");
                 retVal.add(error);
             });
-            return retVal;
+            hasValidationErrors = true;
         }
 
         // shipto and billto can't be moved together
@@ -291,7 +292,12 @@ public class MoveAccountValidate extends BusinessRule {
             });
         }
 
-        log.info("Validation completed with {} errors", retVal.size());
+        if (!hasValidationErrors) {
+            log.info("Validation completed successfully");
+        } else {
+            log.error("Validation failed with {} errors", retVal.size());
+        }
+        
         return retVal;
     }
 }
