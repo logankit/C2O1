@@ -3,6 +3,7 @@ package com.equifax.c2o.api.ruleEngine.service;
 import com.equifax.c2o.api.ruleEngine.businessRule.BusinessRule;
 import com.equifax.c2o.api.ruleEngine.businessRule.MoveAccountValidate;
 import com.equifax.c2o.api.ruleEngine.businessRule.MoveContractValidate;
+import com.equifax.c2o.api.ruleEngine.businessRule.MoveAccountGroupValidate;
 import com.equifax.c2o.api.ruleEngine.entity.RuleConfig;
 import com.equifax.c2o.api.ruleEngine.exception.ValidationException;
 import com.equifax.c2o.api.ruleEngine.model.ErrorDetail;
@@ -25,7 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 
 @Service
 @RequiredArgsConstructor
@@ -41,6 +42,9 @@ public class RuleEngineService {
     @Autowired
     private MoveContractValidate moveContractValidate;
 
+    @Autowired
+    private MoveAccountGroupValidate moveAccountGroupValidate;
+
     private Map<String, BusinessRule> ruleMap;
 
     @PostConstruct
@@ -48,6 +52,7 @@ public class RuleEngineService {
         ruleMap = new HashMap<>();
         ruleMap.put(moveAccountValidate.getRuleName(), moveAccountValidate);
         ruleMap.put(moveContractValidate.getRuleName(), moveContractValidate);
+        ruleMap.put(moveAccountGroupValidate.getRuleName(), moveAccountGroupValidate);
     }
 
     public void validateInputData(String ruleCode, JsonNode inputData) throws ValidationException {
