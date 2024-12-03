@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 import com.equifax.c2o.api.ruleEngine.model.ErrorDetail;
+import com.equifax.c2o.api.ruleEngine.model.EntityType;
 import com.equifax.c2o.api.ruleEngine.model.moveaccount.types.MoveAccountRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -44,7 +45,7 @@ public class MoveAccountGroupValidate extends BusinessRule {
         BigDecimal sourceContractId = requestInput.getSourceContractId();
         if (sourceContractId == null) {
             log.error("Source contract ID is null");
-            retVal.add(new ErrorDetail("EFX_INVALID_CONTRACT", "Source contract ID is required"));
+            retVal.add(new ErrorDetail("EFX_C2O_ERR_INVALID_CONTRACT", "Source contract ID is required", EntityType.TRG_CONTRACT_ID.name()));
             return retVal;
         }
         log.debug("Processing source contract ID: {}", sourceContractId);
@@ -79,7 +80,7 @@ public class MoveAccountGroupValidate extends BusinessRule {
 
         if (sourceShiptos.isEmpty() && sourceBillTos.isEmpty()) {
             log.warn("No valid accounts found in request");
-            retVal.add(new ErrorDetail("EFX_NO_ACCOUNTS", "No valid accounts provided in request"));
+            retVal.add(new ErrorDetail("EFX_C2O_ERR_NO_ACCOUNTS", "No valid accounts provided in request", null));
             return retVal;
         }
 
@@ -164,10 +165,14 @@ public class MoveAccountGroupValidate extends BusinessRule {
             valid = false;
             log.error("Found {} missing ShipTos from discount groups", missingShiptos.size());
             log.error("Missing ShipTos: {}", String.join(",", missingShiptos));
-            ErrorDetail error = new ErrorDetail("EFX_MISSING_SHIPTOS_DISCOUNT_GROUPS",
-                    "Not all shiptos provided of discount groups " + String.join(",", allGroups) + ". Missing shiptos: "
-                            + String.join(",", missingShiptos));
-            retVal.add(error);
+            missingShiptos.forEach(shipto -> {
+                ErrorDetail error = new ErrorDetail(
+                    "EFX_C2O_ERR_MISSING_SHIPTOS_DSG",
+                    "ShipTo " + shipto + " is part of discount groups " + String.join(",", allGroups) + " and must be included",
+                    EntityType.SHIP_TO_OBA_NUMBER.name()
+                );
+                retVal.add(error);
+            });
         } else {
             log.info("All required ShipTos are included in the request");
         }
@@ -229,7 +234,7 @@ public class MoveAccountGroupValidate extends BusinessRule {
         if (res != null && res.size() > 0) {
             String grName = (String) res.get(0);
             log.debug("Found CMT linked aggregator: {}", grName);
-            if (indirectGroupsSet.indexOf(grName) < 0 && directGroupsSet.indexOf(grName) < 0) {
+            if (!indirectGroupsSet.contains(grName) && !directGroupsSet.contains(grName)) {
                 log.debug("Adding new indirect group: {}", grName);
                 indirectGroupsSet.add(grName);
                 findIndirectDiscountGroups(grName, contractId, indirectGroupsSet, directGroupsSet);
@@ -256,7 +261,7 @@ public class MoveAccountGroupValidate extends BusinessRule {
         if (res != null && res.size() > 0) {
             String grName = (String) res.get(0);
             log.debug("Found aggregator linked to CMT DSG: {}", grName);
-            if (indirectGroupsSet.indexOf(grName) < 0 && directGroupsSet.indexOf(grName) < 0) {
+            if (!indirectGroupsSet.contains(grName) && !directGroupsSet.contains(grName)) {
                 log.debug("Adding new indirect group: {}", grName);
                 indirectGroupsSet.add(grName);
                 findIndirectDiscountGroups(grName, contractId, indirectGroupsSet, directGroupsSet);
@@ -321,7 +326,7 @@ public class MoveAccountGroupValidate extends BusinessRule {
             if (res != null && res.size() > 0) {
                 String grName = (String) res.get(0);
                 log.debug("Found additional group linked to members: {}", grName);
-                if (indirectGroupsSet.indexOf(grName) < 0 && directGroupsSet.indexOf(grName) < 0) {
+                if (!indirectGroupsSet.contains(grName) && !directGroupsSet.contains(grName)) {
                     log.debug("Adding new indirect group: {}", grName);
                     indirectGroupsSet.add(grName);
                     findIndirectDiscountGroups(grName, contractId, indirectGroupsSet, directGroupsSet);

@@ -7,6 +7,7 @@ import java.util.List;
 @Data
 public class ApiResponse {
     private String status;
+    private String code;
     private String message;
     private List<ErrorDetail> data;
 }

@@ -17,9 +17,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse> handleValidationException(ValidationException ex) {
         ApiResponse response = new ApiResponse();
         response.setStatus(APIConstants.FAILED);
-        response.setMessage(APIConstants.VALIDATION_FAILED);
-        ErrorDetail error = new ErrorDetail("VALIDATION_ERROR", ex.getMessage());
-        response.setData(Collections.singletonList(error));
+        response.setCode(ex.getCode());
+        response.setMessage(ex.getMessage());
+        response.setData(ex.getData());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
@@ -27,9 +27,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse> handleGenericException(Exception ex) {
         ApiResponse response = new ApiResponse();
         response.setStatus(APIConstants.FAILED);
-        response.setMessage(APIConstants.PROCESSING_ERROR);
-        ErrorDetail error = new ErrorDetail("SERVER_ERROR", ex.getMessage());
-        response.setData(Collections.singletonList(error));
+        response.setCode("EFX_C2O_ERR_RULE_EXEC_FAILED");
+        response.setMessage("Rule execution failed");
+        response.setData(Collections.singletonList(
+            new ErrorDetail("EFX_C2O_ERR_UNEXPECTED", ex.getMessage(), null)
+        ));
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

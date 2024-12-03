@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.equifax.c2o.api.ruleEngine.model.ErrorDetail;
+import com.equifax.c2o.api.ruleEngine.model.EntityType;
 import com.equifax.c2o.api.ruleEngine.model.movecontract.types.MoveContractRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -40,14 +41,18 @@ public class MoveContractValidate extends BusinessRule {
         // Validate required fields
         if (requestInput.getSourceContractId() == null || requestInput.getTargetContractId() == null) {
             log.error("Source or Target Contract ID is missing");
-            retVal.add(new ErrorDetail("EFX_MISSING_CONTRACT_ID", "Source and Target Contract IDs are required"));
+            retVal.add(new ErrorDetail("EFX_C2O_ERR_MISSING_CONTRACT_ID", 
+                "Source and Target Contract IDs are required", 
+                EntityType.TRG_CONTRACT_ID.name()));
             return retVal; // Return immediately for null values as we can't proceed
         }
 
         // Validate contracts are different
         if (requestInput.getSourceContractId().equals(requestInput.getTargetContractId())) {
             log.error("Source and Target Contract IDs are the same: {}", requestInput.getSourceContractId());
-            retVal.add(new ErrorDetail("EFX_SAME_CONTRACT", "Source and Target Contract IDs cannot be the same"));
+            retVal.add(new ErrorDetail("EFX_C2O_ERR_SAME_CONTRACT", 
+                "Source and Target Contract IDs cannot be the same", 
+                EntityType.TRG_CONTRACT_ID.name()));
             hasValidationErrors = true;
         }
 
@@ -71,8 +76,9 @@ public class MoveContractValidate extends BusinessRule {
             // Check if both contracts exist
             if (contracts.size() != 2) {
                 log.error("One or both contracts not found");
-                retVal.add(new ErrorDetail("EFX_CONTRACT_NOT_FOUND", 
-                    "One or both contracts not found"));
+                retVal.add(new ErrorDetail("EFX_C2O_ERR_CONTRACT_NOT_FOUND", 
+                    "One or both contracts not found", 
+                    EntityType.TRG_CONTRACT_ID.name()));
                 hasValidationErrors = true;
             }
 
@@ -89,9 +95,10 @@ public class MoveContractValidate extends BusinessRule {
                         log.error("{} Contract {} is not the latest version. Latest version is {}", 
                             contractType, contractId, maxContractId);
                         
-                        retVal.add(new ErrorDetail("EFX_NOT_LATEST_CONTRACT", 
+                        retVal.add(new ErrorDetail("EFX_C2O_ERR_NOT_LATEST_CONTRACT", 
                             contractType + " Contract " + contractId + " is not the latest version. " +
-                            "Latest Contract ID is " + maxContractId));
+                            "Latest Contract ID is " + maxContractId,
+                            EntityType.TRG_CONTRACT_ID.name()));
                         hasValidationErrors = true;
                     }
                 }
@@ -114,8 +121,9 @@ public class MoveContractValidate extends BusinessRule {
 
                 if (buResults.size() != 2) {
                     log.error("Business unit information not found for one or both contracts");
-                    retVal.add(new ErrorDetail("EFX_BU_NOT_FOUND", 
-                        "Business unit information not found for one or both contracts"));
+                    retVal.add(new ErrorDetail("EFX_C2O_ERR_BU_NOT_FOUND", 
+                        "Business unit information not found for one or both contracts",
+                        EntityType.TRG_CONTRACT_ID.name()));
                     hasValidationErrors = true;
                 }
 
@@ -126,7 +134,7 @@ public class MoveContractValidate extends BusinessRule {
                     for (Object[] result : buResults) {
                         Long contractId = ((Number) result[0]).longValue();
                         String buId = (String) result[1];
-
+                        
                         if (contractId.equals(Long.valueOf(requestInput.getSourceContractId()))) {
                             sourceBuId = buId;
                         } else {
@@ -135,13 +143,11 @@ public class MoveContractValidate extends BusinessRule {
                     }
 
                     if (!sourceBuId.equals(targetBuId)) {
-                        log.error("Contracts belong to different business units. Source BU: {}, Target BU: {}", 
-                            sourceBuId, targetBuId);
-                        retVal.add(new ErrorDetail("EFX_DIFFERENT_BUSINESS_UNIT", 
-                            "Source Contract " + requestInput.getSourceContractId() + " belongs to Business Unit " + sourceBuId + 
-                            " and Target Contract " + requestInput.getTargetContractId() + " belongs to Business Unit " + targetBuId + 
-                            ". Contracts must belong to the same Business Unit."));
-                        hasValidationErrors = true;
+                        log.error("Business units do not match: source={}, target={}", sourceBuId, targetBuId);
+                        retVal.add(new ErrorDetail("EFX_C2O_ERR_BU_MISMATCH", 
+                            "Source contract business unit (" + sourceBuId + 
+                            ") does not match target contract business unit (" + targetBuId + ")",
+                            EntityType.TRG_CONTRACT_ID.name()));
                     }
                 }
             }

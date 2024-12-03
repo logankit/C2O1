@@ -6,15 +6,18 @@ import lombok.Data;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class MoveAccountRequest {
-    @JsonProperty(value = "sourceContractId", alternative = "sourceContract")
+    @JsonProperty("sourceContractId")
+    @JsonAlias("sourceContract")
     private BigDecimal sourceContractId;
     
-    @JsonProperty(value = "targetContractId", alternative = "targetContract")
+    @JsonProperty("targetContractId")
+    @JsonAlias("targetContract")
     private BigDecimal targetContractId;
     
     private List<ShipTo> shipTos;

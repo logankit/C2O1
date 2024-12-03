@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.equifax.c2o.api.ruleEngine.model.ErrorDetail;
+import com.equifax.c2o.api.ruleEngine.model.EntityType;
 import com.equifax.c2o.api.ruleEngine.model.moveaccount.types.MoveAccountRequest;
 import com.equifax.c2o.api.ruleEngine.model.moveaccount.types.ShipTo;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -54,14 +55,18 @@ public class MoveAccountValidate extends BusinessRule {
         // Validate required fields
         if (requestInput.getSourceContractId() == null || requestInput.getTargetContractId() == null) {
             log.error("Source or Target Contract ID is missing");
-            retVal.add(new ErrorDetail("EFX_MISSING_CONTRACT_ID", "Source and Target Contract IDs are required"));
+            retVal.add(new ErrorDetail("EFX_C2O_ERR_MISSING_CONTRACT_ID", 
+                "Source and Target Contract IDs are required", 
+                EntityType.TRG_CONTRACT_ID.name()));
             hasValidationErrors = true;
         }
 
         // Validate contracts are different
         if (requestInput.getSourceContractId().equals(requestInput.getTargetContractId())) {
             log.error("Source and Target Contract IDs are the same: {}", requestInput.getSourceContractId());
-            retVal.add(new ErrorDetail("EFX_SAME_CONTRACT", "Source and Target Contract IDs cannot be the same"));
+            retVal.add(new ErrorDetail("EFX_C2O_ERR_SAME_CONTRACT", 
+                "Source and Target Contract IDs cannot be the same", 
+                EntityType.TRG_CONTRACT_ID.name()));
             hasValidationErrors = true;
         }
 
@@ -93,15 +98,17 @@ public class MoveAccountValidate extends BusinessRule {
         // Skip validations if no accounts to process
         if (sourceShiptos.isEmpty() && sourceBillTos.isEmpty()) {
             log.warn("No accounts to process in the request");
-            retVal.add(new ErrorDetail("EFX_NO_ACCOUNTS", "No accounts provided for processing"));
+            retVal.add(new ErrorDetail("EFX_C2O_ERR_NO_ACCOUNTS", 
+                "No accounts provided for processing", null));
             hasValidationErrors = true;
         }
 
         // Validate target billtos are provided if shiptos are present
         if (!sourceShiptos.isEmpty() && targetBillTos.isEmpty()) {
             log.error("Target BillTos are missing for ShipTos");
-            retVal.add(new ErrorDetail("EFX_MISSING_TARGET_BILLTO", 
-                "Target BillTo must be provided for each ShipTo"));
+            retVal.add(new ErrorDetail("EFX_C2O_ERR_MISSING_TARGET_BILLTO", 
+                "Target BillTo must be provided for each ShipTo",
+                EntityType.BILL_TO_OBA_NUMBER.name()));
             hasValidationErrors = true;
         }
 
@@ -135,8 +142,11 @@ public class MoveAccountValidate extends BusinessRule {
             if (!nonExistentAccounts.isEmpty()) {
                 log.warn("Found non-existent accounts: {}", nonExistentAccounts);
                 nonExistentAccounts.forEach(acc -> {
-                    ErrorDetail error = new ErrorDetail("EFX_ACCOUNT_NOT_FOUND", 
-                        "Account " + acc + " does not exist");
+                    String entityType = sourceShiptos.contains(acc) ? EntityType.SHIP_TO_OBA_NUMBER.name() :
+                                      sourceBillTos.contains(acc) ? EntityType.BILL_TO_OBA_NUMBER.name() :
+                                      EntityType.TRG_BILL_TO_OBA_NUMBER.name();
+                    ErrorDetail error = new ErrorDetail("EFX_C2O_ERR_ACCOUNT_NOT_FOUND", 
+                        "Account " + acc + " does not exist", entityType);
                     retVal.add(error);
                 });
                 hasValidationErrors = true;
