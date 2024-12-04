@@ -20,13 +20,12 @@ import java.util.Collections;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/v1/execute")
 @RequiredArgsConstructor
 public class RuleEngineController {
 
     private final RuleEngineService ruleEngineService;
 
-    @PostMapping
+    @PostMapping("/v1/execute")
     public ResponseEntity<ApiResponse> executeRule(
             @RequestHeader(name = "efx-client-correlation-id") UUID correlationId,
             @Valid @RequestBody RequestPayload requestPayload) {
@@ -54,7 +53,7 @@ public class RuleEngineController {
         }
     }
 	
-    @GetMapping(value = "/health", produces = "application/json")
+    @GetMapping("/health")
     public ResponseEntity<ApiResponse> health() {
         ApiResponse response = new ApiResponse();
         response.setStatus(APIConstants.SUCCESS);
