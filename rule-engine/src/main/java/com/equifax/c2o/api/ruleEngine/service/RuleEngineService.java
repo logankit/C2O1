@@ -62,26 +62,55 @@ public class RuleEngineService {
             log.info("Starting validation for rule code: {}", ruleCode);
             
             if (ruleCode == null || ruleCode.trim().isEmpty()) {
-                throw new ValidationException("EFX_C2O_ERR_RULE_EXEC_FAILED", "Rule code is required", null);
+                throw new ValidationException(
+                    "EFX_C2O_ERR_RULE_EXEC_FAILED",
+                    "Rule code is required",
+                    Collections.singletonList(new ErrorDetail(
+                        "EFX_C2O_ERR_INVALID_RULE_CODE",
+                        "Rule code is required but was not provided or is invalid",
+                        null
+                    ))
+                );
             }
             
             if (inputData == null) {
-                throw new ValidationException("EFX_C2O_ERR_RULE_EXEC_FAILED", "Input data is required", null);
+                throw new ValidationException(
+                    "EFX_C2O_ERR_RULE_EXEC_FAILED",
+                    "Input data is required",
+                    Collections.singletonList(new ErrorDetail(
+                        "EFX_C2O_ERR_INVALID_INPUT",
+                        "Input data is required but was not provided",
+                        null
+                    ))
+                );
             }
 
             // Find rule configuration
             RuleConfig ruleConfig = ruleConfigRepository.findByRuleCode(ruleCode)
-                    .orElseThrow(() -> new ValidationException("EFX_C2O_ERR_RULE_EXEC_FAILED", 
-                        "Rule code not found: " + ruleCode, null));
+                    .orElseThrow(() -> new ValidationException(
+                        "EFX_C2O_ERR_RULE_EXEC_FAILED",
+                        "Rule code not found: " + ruleCode,
+                        Collections.singletonList(new ErrorDetail(
+                            "EFX_C2O_ERR_RULE_NOT_FOUND",
+                            "The specified rule code does not exist: " + ruleCode,
+                            null
+                        ))
+                    ));
 
             // Schema validation
             List<String> schemaErrors = validateSchema(ruleCode, ruleConfig, inputData);
             if (!schemaErrors.isEmpty()) {
                 String errorMessage = String.join("; ", schemaErrors);
                 log.error("Schema validation failed for rule {}: {}", ruleCode, errorMessage);
-                throw new ValidationException("EFX_C2O_ERR_RULE_EXEC_FAILED", 
-                    "Schema validation failed", Collections.singletonList(
-                        new ErrorDetail("EFX_C2O_ERR_SCHEMA_VALIDATION", errorMessage, null)));
+                throw new ValidationException(
+                    "EFX_C2O_ERR_RULE_EXEC_FAILED",
+                    "Schema validation failed",
+                    Collections.singletonList(new ErrorDetail(
+                        "EFX_C2O_ERR_SCHEMA_VALIDATION",
+                        errorMessage,
+                        null
+                    ))
+                );
             }
             log.info("Schema validation successful for rule code: {}", ruleCode);
 
@@ -89,8 +118,11 @@ public class RuleEngineService {
             List<ErrorDetail> businessErrors = validateBusinessRules(ruleCode, inputData);
             if (!businessErrors.isEmpty()) {
                 log.error("Business validation failed for rule {}", ruleCode);
-                throw new ValidationException("EFX_C2O_ERR_RULE_EXEC_FAILED", 
-                    "Rule execution failed", businessErrors);
+                throw new ValidationException(
+                    "EFX_C2O_ERR_RULE_EXEC_FAILED",
+                    "Rule execution failed",
+                    businessErrors
+                );
             }
             
             log.info("Validation completed successfully for rule code: {}", ruleCode);
@@ -99,9 +131,15 @@ public class RuleEngineService {
             throw ve;
         } catch (Exception e) {
             log.error("Unexpected error during validation for rule {}: {}", ruleCode, e.getMessage(), e);
-            throw new ValidationException("EFX_C2O_ERR_RULE_EXEC_FAILED", 
-                "Validation failed: " + e.getMessage(), 
-                Collections.singletonList(new ErrorDetail("EFX_C2O_ERR_UNEXPECTED", e.getMessage(), null)));
+            throw new ValidationException(
+                "EFX_C2O_ERR_RULE_EXEC_FAILED",
+                "Validation failed: " + e.getMessage(),
+                Collections.singletonList(new ErrorDetail(
+                    "EFX_C2O_ERR_UNEXPECTED",
+                    "An unexpected error occurred during validation: " + e.getMessage(),
+                    null
+                ))
+            );
         }
     }
 

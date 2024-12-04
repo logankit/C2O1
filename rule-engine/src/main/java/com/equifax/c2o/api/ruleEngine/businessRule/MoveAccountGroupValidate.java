@@ -140,29 +140,58 @@ public class MoveAccountGroupValidate extends BusinessRule {
                 billtoList.size());
         List<String> retVal = new ArrayList<>();
         String queryStr = "select distinct ce.sharing_group_name\r\n"
-                + "from c2o_contract_entitlement ce, c2o_account a, c2o_account b \r\n"
+                + "from c2o_contract_entitlement ce, c2o_account a \r\n"
                 + "where ce.contract_id = :p_contract_id\r\n"
-                + "and ce.account_id = a.row_id and a.parent_account_id = b.row_id\r\n"
-                + "and (a.oba_number in :p_ship_oba_list or a.parent_account_id in :p_bill_oba_list) and ce.sharing_group_name is not null \r\n"
+                + "and ce.account_id = a.row_id\r\n"
+                + "and a.oba_number in :p_ship_oba_list and ce.sharing_group_name is not null \r\n"
                 + "union\r\n"
                 + "select distinct ce.aggregator_name\r\n"
-                + "from c2o_contract_entitlement ce, c2o_account a, c2o_account b \r\n"
+                + "from c2o_contract_entitlement ce, c2o_account a \r\n"
                 + "where ce.contract_id = :p_contract_id\r\n"
-                + "and ce.account_id = a.row_id and a.parent_account_id = b.row_id\r\n"
-                + "and (a.oba_number in :p_ship_oba_list or a.parent_account_id in :p_bill_oba_list) and ce.aggregator_name is not null \r\n"
+                + "and ce.account_id = a.row_id\r\n"
+                + "and a.oba_number in :p_ship_oba_list and ce.aggregator_name is not null \r\n"
                 + "union\r\n"
                 + "select distinct co.subscription_link\r\n"
-                + "from c2o_contract_entitlement ce, c2o_account a, c2o_account b, c2o_contract_charge_offers co \r\n"
+                + "from c2o_contract_entitlement ce, c2o_account a, c2o_contract_charge_offers co \r\n"
                 + "where ce.contract_id = :p_contract_id and ce.contract_id = co.contract_id and ce.line_charge_offer_id = co.id\r\n"
-                + "and ce.account_id = a.row_id and a.parent_account_id = b.row_id and co.charge_offer_id like '%_2'\r\n"
+                + "and ce.account_id = a.row_id and co.charge_offer_id like '%_2'\r\n"
                 + "and co.subscription_link is not null\r\n"
-                + "and (a.oba_number in :p_ship_oba_list or a.parent_account_id in :p_bill_oba_list)";
+                + "and a.oba_number in :p_ship_oba_list";
 
         Query query = em.createNativeQuery(queryStr);
         query.setParameter("p_contract_id", contractId);
         query.setParameter("p_ship_oba_list", shiptoList);
-        query.setParameter("p_bill_oba_list", billtoList);
+
         retVal = query.getResultList();
+
+        // If we have bill-to OBA numbers, add them to the search
+        if (!billtoList.isEmpty()) {
+            String billToQueryStr = "select distinct ce.sharing_group_name\r\n"
+                    + "from c2o_contract_entitlement ce, c2o_account a \r\n"
+                    + "where ce.contract_id = :p_contract_id\r\n"
+                    + "and ce.account_id = a.row_id\r\n"
+                    + "and a.oba_number in :p_bill_oba_list and ce.sharing_group_name is not null \r\n"
+                    + "union\r\n"
+                    + "select distinct ce.aggregator_name\r\n"
+                    + "from c2o_contract_entitlement ce, c2o_account a \r\n"
+                    + "where ce.contract_id = :p_contract_id\r\n"
+                    + "and ce.account_id = a.row_id\r\n"
+                    + "and a.oba_number in :p_bill_oba_list and ce.aggregator_name is not null \r\n"
+                    + "union\r\n"
+                    + "select distinct co.subscription_link\r\n"
+                    + "from c2o_contract_entitlement ce, c2o_account a, c2o_contract_charge_offers co \r\n"
+                    + "where ce.contract_id = :p_contract_id and ce.contract_id = co.contract_id and ce.line_charge_offer_id = co.id\r\n"
+                    + "and ce.account_id = a.row_id and co.charge_offer_id like '%_2'\r\n"
+                    + "and co.subscription_link is not null\r\n"
+                    + "and a.oba_number in :p_bill_oba_list";
+
+            Query billToQuery = em.createNativeQuery(billToQueryStr);
+            billToQuery.setParameter("p_contract_id", contractId);
+            billToQuery.setParameter("p_bill_oba_list", billtoList);
+            
+            List<String> billToResults = billToQuery.getResultList();
+            retVal.addAll(billToResults);
+        }
 
         log.debug("Found {} discount groups", retVal.size());
         if (!retVal.isEmpty()) {
