@@ -35,8 +35,14 @@ public class RuleEngineController {
         } catch (Exception e) {
             ApiResponse response = new ApiResponse();
             response.setStatus(APIConstants.FAILED);
-            response.setMessage("Validation failed: " + e.getMessage());
-            response.setData(Collections.emptyList());
+            if (e instanceof ValidationException validationException) {
+                response.setCode(validationException.getCode());
+                response.setMessage(e.getMessage());
+                response.setData(validationException.getData());
+            } else {
+                response.setMessage("Validation failed: " + e.getMessage());
+                response.setData(Collections.emptyList());
+            }
             return ResponseEntity.badRequest().body(response);
         }
     }
