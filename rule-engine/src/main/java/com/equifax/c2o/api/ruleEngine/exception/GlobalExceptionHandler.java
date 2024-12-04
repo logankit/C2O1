@@ -19,7 +19,17 @@ public class GlobalExceptionHandler {
         response.setStatus(APIConstants.FAILED);
         response.setCode(ex.getCode());
         response.setMessage(ex.getMessage());
+        
+        // Transform error details to include formatted entity
+        if (ex.getData() != null) {
+            ex.getData().forEach(error -> {
+                if (error.getEntity() != null) {
+                    error.setEntity(error.getFormattedEntity());
+                }
+            });
+        }
         response.setData(ex.getData());
+        
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 

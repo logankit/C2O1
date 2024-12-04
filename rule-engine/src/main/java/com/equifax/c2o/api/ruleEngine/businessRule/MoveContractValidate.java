@@ -41,18 +41,26 @@ public class MoveContractValidate extends BusinessRule {
         // Validate required fields
         if (requestInput.getSourceContractId() == null || requestInput.getTargetContractId() == null) {
             log.error("Source or Target Contract ID is missing");
-            retVal.add(new ErrorDetail("EFX_C2O_ERR_MISSING_CONTRACT_ID", 
+            retVal.add(new ErrorDetail(
+                "EFX_C2O_ERR_MISSING_CONTRACT_ID", 
                 "Source and Target Contract IDs are required", 
-                EntityType.TRG_CONTRACT_ID.name()));
+                EntityType.TRG_CONTRACT_ID.name() + "[" + 
+                    (requestInput.getSourceContractId() != null ? 
+                        requestInput.getSourceContractId().toString() : 
+                        requestInput.getTargetContractId() != null ? 
+                            requestInput.getTargetContractId().toString() : "") + "]"
+            ));
             return retVal; // Return immediately for null values as we can't proceed
         }
 
         // Validate contracts are different
         if (requestInput.getSourceContractId().equals(requestInput.getTargetContractId())) {
             log.error("Source and Target Contract IDs are the same: {}", requestInput.getSourceContractId());
-            retVal.add(new ErrorDetail("EFX_C2O_ERR_SAME_CONTRACT", 
+            retVal.add(new ErrorDetail(
+                "EFX_C2O_ERR_SAME_CONTRACT", 
                 "Source and Target Contract IDs cannot be the same", 
-                EntityType.TRG_CONTRACT_ID.name()));
+                EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
+            ));
             hasValidationErrors = true;
         }
 
@@ -76,9 +84,24 @@ public class MoveContractValidate extends BusinessRule {
             // Check if both contracts exist
             if (contracts.size() != 2) {
                 log.error("One or both contracts not found");
-                retVal.add(new ErrorDetail("EFX_C2O_ERR_CONTRACT_NOT_FOUND", 
-                    "One or both contracts not found", 
-                    EntityType.TRG_CONTRACT_ID.name()));
+                List<Long> foundContractIds = contracts.stream()
+                    .map(contract -> ((Number) contract[0]).longValue())
+                    .collect(Collectors.toList());
+                
+                if (!foundContractIds.contains(requestInput.getSourceContractId())) {
+                    retVal.add(new ErrorDetail(
+                        "EFX_C2O_ERR_CONTRACT_NOT_FOUND", 
+                        "Source contract not found", 
+                        EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
+                    ));
+                }
+                if (!foundContractIds.contains(requestInput.getTargetContractId())) {
+                    retVal.add(new ErrorDetail(
+                        "EFX_C2O_ERR_CONTRACT_NOT_FOUND", 
+                        "Target contract not found", 
+                        EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getTargetContractId().toString() + "]"
+                    ));
+                }
                 hasValidationErrors = true;
             }
 
@@ -95,10 +118,12 @@ public class MoveContractValidate extends BusinessRule {
                         log.error("{} Contract {} is not the latest version. Latest version is {}", 
                             contractType, contractId, maxContractId);
                         
-                        retVal.add(new ErrorDetail("EFX_C2O_ERR_NOT_LATEST_CONTRACT", 
+                        retVal.add(new ErrorDetail(
+                            "EFX_C2O_ERR_NOT_LATEST_CONTRACT", 
                             contractType + " Contract " + contractId + " is not the latest version. " +
                             "Latest Contract ID is " + maxContractId,
-                            EntityType.TRG_CONTRACT_ID.name()));
+                            EntityType.TRG_CONTRACT_ID.name() + "[" + contractId.toString() + "]"
+                        ));
                         hasValidationErrors = true;
                     }
                 }

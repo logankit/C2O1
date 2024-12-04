@@ -45,7 +45,11 @@ public class MoveAccountGroupValidate extends BusinessRule {
         BigDecimal sourceContractId = requestInput.getSourceContractId();
         if (sourceContractId == null) {
             log.error("Source contract ID is null");
-            retVal.add(new ErrorDetail("EFX_C2O_ERR_INVALID_CONTRACT", "Source contract ID is required", EntityType.TRG_CONTRACT_ID.name()));
+            retVal.add(new ErrorDetail(
+                "EFX_C2O_ERR_INVALID_CONTRACT", 
+                "Source contract ID is required", 
+                EntityType.TRG_CONTRACT_ID.name() + "[null]"
+            ));
             return retVal;
         }
         log.debug("Processing source contract ID: {}", sourceContractId);
@@ -80,7 +84,11 @@ public class MoveAccountGroupValidate extends BusinessRule {
 
         if (sourceShiptos.isEmpty() && sourceBillTos.isEmpty()) {
             log.warn("No valid accounts found in request");
-            retVal.add(new ErrorDetail("EFX_C2O_ERR_NO_ACCOUNTS", "No valid accounts provided in request", null));
+            retVal.add(new ErrorDetail(
+                "EFX_C2O_ERR_NO_ACCOUNTS", 
+                "No valid accounts provided in request", 
+                null
+            ));
             return retVal;
         }
 
@@ -166,12 +174,11 @@ public class MoveAccountGroupValidate extends BusinessRule {
             log.error("Found {} missing ShipTos from discount groups", missingShiptos.size());
             log.error("Missing ShipTos: {}", String.join(",", missingShiptos));
             missingShiptos.forEach(shipto -> {
-                ErrorDetail error = new ErrorDetail(
+                retVal.add(new ErrorDetail(
                     "EFX_C2O_ERR_MISSING_SHIPTOS_DSG",
-                    "ShipTo " + shipto + " is part of discount groups " + String.join(",", allGroups) + " and must be included",
-                    EntityType.SHIP_TO_OBA_NUMBER.name()
-                );
-                retVal.add(error);
+                    "ShipTo is part of discount groups " + String.join(",", allGroups) + " and must be included",
+                    EntityType.SHIP_TO_OBA_NUMBER.name() + "[" + shipto + "]"
+                ));
             });
         } else {
             log.info("All required ShipTos are included in the request");
