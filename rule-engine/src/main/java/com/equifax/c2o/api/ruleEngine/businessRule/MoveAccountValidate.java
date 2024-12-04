@@ -179,7 +179,8 @@ public class MoveAccountValidate extends BusinessRule {
                 log.warn("Found non-shipto accounts in shipto list: {}", invalidShipTos);
                 invalidShipTos.forEach(acc -> {
                     ErrorDetail error = new ErrorDetail("EFX_INVALID_ACCOUNT_TYPE", 
-                        "Account " + acc + " is not a ShipTo account");
+                        "Account " + acc + " is not a ShipTo account",
+                        EntityType.SHIP_TO_OBA_NUMBER.name() + "[" + acc + "]");
                     retVal.add(error);
                 });
                 hasValidationErrors = true;
@@ -193,7 +194,8 @@ public class MoveAccountValidate extends BusinessRule {
                 log.warn("Found non-billto accounts in billto list: {}", invalidBillTos);
                 invalidBillTos.forEach(acc -> {
                     ErrorDetail error = new ErrorDetail("EFX_INVALID_ACCOUNT_TYPE", 
-                        "Account " + acc + " is not a BillTo account");
+                        "Account " + acc + " is not a BillTo account",
+                        sourceBillTos.contains(acc) ? EntityType.BILL_TO_OBA_NUMBER.name() + "[" + acc + "]" : EntityType.TRG_BILL_TO_OBA_NUMBER.name() + "[" + acc + "]");
                     retVal.add(error);
                 });
                 hasValidationErrors = true;
@@ -227,9 +229,11 @@ public class MoveAccountValidate extends BusinessRule {
             
             inactiveShiptos.forEach(obaNumber -> {
                 log.warn("Inactive shipto found: {}", obaNumber);
-                ErrorDetail error = new ErrorDetail("EFX_NOT_AN_ACTIVE_SHIPTO", 
-                    obaNumber + " is not an active Shipto");
-                retVal.add(error);
+                retVal.add(new ErrorDetail(
+                    "EFX_NOT_AN_ACTIVE_SHIPTO", 
+                    obaNumber + " is not an active Shipto",
+                    EntityType.SHIP_TO_OBA_NUMBER.name() + "[" + obaNumber + "]"
+                ));
             });
             
             if (!inactiveShiptos.isEmpty()) {
@@ -239,40 +243,44 @@ public class MoveAccountValidate extends BusinessRule {
 
         // moving to a different BDOM
         if(!sourceShiptos.isEmpty() && !targetBillTos.isEmpty()) {
+            String queryStr2 = "SELECT a.oba_number, b.billing_day_of_month as source_bdom, t.billing_day_of_month as target_bdom " +
+                "FROM c2o_account a " +
+                "JOIN c2o_account b ON a.parent_account_id = b.row_id " +
+                "JOIN c2o_account t ON t.oba_number = :p_target_billto " +
+                "WHERE a.account_version = :version " +
+                "AND t.account_version = :version " +
+                "AND a.oba_number IN :p_oba_list " +
+                "AND b.billing_day_of_month != t.billing_day_of_month";
+
             requestInput.getShipTos().forEach(shipto -> {
                 if (shipto.getObaNumbers() != null && !shipto.getObaNumbers().isEmpty() 
                     && shipto.getTargetBillTo() != null) {
-                    String queryStr2 = "Select a.oba_number from c2o_account a "
-                        + " join c2o_account b on a.parent_account_id = b.row_id "
-                        + " join c2o_account t on t.oba_number = :p_target_billto "
-                        + " where a.account_version = :version "
-                        + " and t.account_version = :version "
-                        + " and a.oba_number in :p_oba_list "
-                        + " and b.billing_day_of_month != t.billing_day_of_month";
-                    log.debug("Executing BDOM validation query: {}", queryStr2);
-                    log.debug("Query parameters - p_oba_list: {}, p_target_billto: {}", 
-                             shipto.getObaNumbers(), shipto.getTargetBillTo());
+                    log.debug("Executing BDOM validation query for target BillTo: {}", shipto.getTargetBillTo());
                     
                     Query query2 = em.createNativeQuery(queryStr2);
                     query2.setParameter("version", ACCOUNT_VERSION_CURRENT);
                     query2.setParameter("p_oba_list", shipto.getObaNumbers());
                     query2.setParameter("p_target_billto", shipto.getTargetBillTo());
-                    List<?> differentBdomShiptos = query2.getResultList();
-                    log.info("Found {} shiptos with different BDOM", differentBdomShiptos.size());
                     
-                    differentBdomShiptos.forEach(acc -> {
-                        String obaNumber = (String)acc;
-                        log.warn("BDOM mismatch for shipto: {}", obaNumber);
-                        ErrorDetail error = new ErrorDetail("EFX_SHIPTO_MOVING_TO_DIFFERENT_BDOM", 
-                            obaNumber + " cannot be moved to a bill to with different BDOM");
-                        retVal.add(error);
-                    });
+                    List<Object[]> bdomResults = query2.getResultList();
+                    if (!bdomResults.isEmpty()) {
+                        bdomResults.forEach(result -> {
+                            String shiptoOba = (String) result[0];
+                            String sourceBdom = (String) result[1];
+                            String targetBdom = (String) result[2];
+                            
+                            log.warn("BDOM mismatch for shipto: {} (source BDOM: {}, target BDOM: {})", 
+                                    shiptoOba, sourceBdom, targetBdom);
+                            retVal.add(new ErrorDetail(
+                                "EFX_SHIPTO_MOVING_TO_DIFFERENT_BDOM", 
+                                String.format("ShipTo %s cannot be moved from BDOM %s to BDOM %s", 
+                                    shiptoOba, sourceBdom, targetBdom),
+                                EntityType.SHIP_TO_OBA_NUMBER.name() + "[" + shiptoOba + "]"
+                            ));
+                        });
+                    }
                 }
             });
-            
-            if (!retVal.isEmpty()) {
-                hasValidationErrors = true;
-            }
         }
 
         // shipto move to more than one billto
@@ -284,9 +292,11 @@ public class MoveAccountValidate extends BusinessRule {
         if (!duplicateShiptos.isEmpty()) {
             log.warn("Found shiptos being moved to multiple billtos: {}", duplicateShiptos);
             duplicateShiptos.forEach(e -> {
-                ErrorDetail error = new ErrorDetail("EFX_SHIPTO_MOVED_MORE_THAN_ONE_BILLTO", 
-                    e + " cannot be moved to more than one Billto");
-                retVal.add(error);
+                retVal.add(new ErrorDetail(
+                    "EFX_SHIPTO_MOVED_MORE_THAN_ONE_BILLTO", 
+                    e + " cannot be moved to more than one Billto",
+                    EntityType.SHIP_TO_OBA_NUMBER.name() + "[" + e + "]"
+                ));
             });
             hasValidationErrors = true;
         }
@@ -314,9 +324,11 @@ public class MoveAccountValidate extends BusinessRule {
             invalidMoves.forEach(acc -> {
                 String obaNumber = (String)acc;
                 log.warn("Invalid shipto-billto combination found for: {}", obaNumber);
-                ErrorDetail error = new ErrorDetail("EFX_SHIPTO_BILLTO_MOVED_TOGETHER", 
-                    obaNumber + " cannot be moved with its Billto");
-                retVal.add(error);
+                retVal.add(new ErrorDetail(
+                    "EFX_SHIPTO_BILLTO_MOVED_TOGETHER", 
+                    obaNumber + " cannot be moved with its Billto",
+                    EntityType.SHIP_TO_OBA_NUMBER.name() + "[" + obaNumber + "]"
+                ));
             });
         }
 

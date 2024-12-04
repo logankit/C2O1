@@ -17,6 +17,7 @@ import com.networknt.schema.ValidationMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,13 +26,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
+@RequiredArgsConstructor
 public class RuleEngineService {
 
     private final RuleConfigRepository ruleConfigRepository;
@@ -48,12 +55,62 @@ public class RuleEngineService {
 
     private Map<String, BusinessRule> ruleMap;
 
+    @Value("${validation.thread.pool.size:10}")
+    private int threadPoolSize;
+
+    private ThreadPoolExecutor validationExecutor;
+
     @PostConstruct
     private void init() {
+        // Initialize rule map
         ruleMap = new HashMap<>();
         ruleMap.put(moveAccountValidate.getRuleName(), moveAccountValidate);
         ruleMap.put(moveContractValidate.getRuleName(), moveContractValidate);
         ruleMap.put(moveAccountGroupValidate.getRuleName(), moveAccountGroupValidate);
+        
+        // Initialize thread pool with monitoring
+        validationExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadPoolSize);
+        log.info("Initialized validation thread pool with size: {}", threadPoolSize);
+        
+        // Log thread pool stats periodically
+        CompletableFuture.runAsync(() -> {
+            while (!validationExecutor.isShutdown()) {
+                try {
+                    Thread.sleep(60000); // Log every minute
+                    logThreadPoolStats();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        });
+    }
+    
+    private void logThreadPoolStats() {
+        log.info("Thread Pool Stats - Active: {}, Pool: {}, Queue: {}, Completed: {}",
+            validationExecutor.getActiveCount(),
+            validationExecutor.getPoolSize(),
+            validationExecutor.getQueue().size(),
+            validationExecutor.getCompletedTaskCount()
+        );
+    }
+    
+    @PreDestroy
+    private void cleanup() {
+        if (validationExecutor != null) {
+            logThreadPoolStats(); // Log final stats
+            validationExecutor.shutdown();
+            try {
+                if (!validationExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
+                    validationExecutor.shutdownNow();
+                }
+                log.info("Validation thread pool shutdown completed");
+            } catch (InterruptedException e) {
+                validationExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+                log.warn("Validation thread pool shutdown interrupted");
+            }
+        }
     }
 
     public void validateInputData(String ruleCode, JsonNode inputData) throws ValidationException {
@@ -84,8 +141,8 @@ public class RuleEngineService {
             }
             log.info("Schema validation successful for rule code: {}", ruleCode);
 
-            // Business rule validation
-            List<ErrorDetail> businessErrors = validateBusinessRule(ruleCode, inputData);
+            // Business rule validation - now parallel
+            List<ErrorDetail> businessErrors = validateBusinessRules(ruleCode, inputData);
             if (!businessErrors.isEmpty()) {
                 log.error("Business validation failed for rule {}", ruleCode);
                 throw new ValidationException("EFX_C2O_ERR_RULE_EXEC_FAILED", 
@@ -128,34 +185,111 @@ public class RuleEngineService {
         return errors;
     }
 
-    private List<ErrorDetail> validateBusinessRule(String ruleCode, JsonNode inputData) {
-        List<ErrorDetail> errors = new ArrayList<>();
+    private List<ErrorDetail> validateBusinessRules(String ruleCode, JsonNode inputData) {
+        List<ErrorDetail> allErrors = new ArrayList<>();
+        String inputJson;
         try {
-            BusinessRule businessRule = getBusinessRule(ruleCode);
-            if (businessRule != null) {
-                // Convert JsonNode to JSON string properly using ObjectMapper
-                String inputJson = objectMapper.writeValueAsString(inputData);
-                errors = businessRule.validate(inputJson);
-                
-                if (!errors.isEmpty()) {
-                    errors.forEach(error -> 
-                        log.warn("Business validation error for rule {}: {} - {}", 
-                            ruleCode, error.getCode(), error.getMessage())
-                    );
-                }
-            } else {
-                log.info("No business validation defined for rule code: {}", ruleCode);
-            }
+            inputJson = objectMapper.writeValueAsString(inputData);
         } catch (Exception e) {
-            log.error("Error during business validation for rule {}: {}", ruleCode, e.getMessage(), e);
-            errors.add(new ErrorDetail("VALIDATION_ERROR", "Business validation failed: " + e.getMessage()));
+            log.error("Error converting input data to JSON for rule {}: {}", ruleCode, e.getMessage());
+            allErrors.add(new ErrorDetail(
+                "EFX_C2O_ERR_INPUT_CONVERSION",
+                "Failed to convert input data to JSON: " + e.getMessage(),
+                null
+            ));
+            return allErrors;
         }
-        return errors;
+
+        // Get all applicable business rules
+        List<BusinessRule> rules = new ArrayList<>();
+        BusinessRule rule = getBusinessRule(ruleCode);
+        if (rule != null) {
+            rules.add(rule);
+        }
+
+        if (rules.isEmpty()) {
+            log.info("No business rules found for rule code: {}", ruleCode);
+            return allErrors;
+        }
+
+        // Create CompletableFuture for each validation rule
+        List<CompletableFuture<List<ErrorDetail>>> futures = rules.stream()
+            .map(businessRule -> CompletableFuture.supplyAsync(() -> {
+                try {
+                    log.debug("Starting validation for rule: {}", businessRule.getRuleName());
+                    List<ErrorDetail> errors = businessRule.validate(inputJson);
+                    if (!errors.isEmpty()) {
+                        log.warn("Found {} validation errors for rule: {}", 
+                            errors.size(), businessRule.getRuleName());
+                    }
+                    return errors;
+                } catch (Exception e) {
+                    log.error("Error in async validation for rule {}: {}", 
+                        businessRule.getRuleName(), e.getMessage(), e);
+                    List<ErrorDetail> asyncErrors = new ArrayList<>();
+                    asyncErrors.add(new ErrorDetail(
+                        "EFX_C2O_ERR_RULE_EXEC_FAILED",
+                        String.format("Validation failed for rule %s: %s", 
+                            businessRule.getRuleName(), e.getMessage()),
+                        null
+                    ));
+                    return asyncErrors;
+                }
+            }, validationExecutor))
+            .collect(Collectors.toList());
+
+        try {
+            // Wait for all validations to complete with timeout
+            CompletableFuture<Void> allOf = CompletableFuture.allOf(
+                futures.toArray(new CompletableFuture[0])
+            );
+
+            // Wait for completion or timeout
+            allOf.get(30, TimeUnit.SECONDS);
+
+            // Collect all errors
+            futures.stream()
+                .map(future -> {
+                    try {
+                        return future.get();
+                    } catch (Exception e) {
+                        log.error("Error getting validation results: {}", e.getMessage());
+                        List<ErrorDetail> errors = new ArrayList<>();
+                        errors.add(new ErrorDetail(
+                            "EFX_C2O_ERR_RESULT_COLLECTION",
+                            "Failed to collect validation results: " + e.getMessage(),
+                            null
+                        ));
+                        return errors;
+                    }
+                })
+                .forEach(allErrors::addAll);
+
+        } catch (java.util.concurrent.TimeoutException te) {
+            log.error("Validation timed out for rule code {}", ruleCode);
+            // Cancel all futures on timeout
+            futures.forEach(future -> future.cancel(true));
+            allErrors.add(new ErrorDetail(
+                "EFX_C2O_ERR_RULE_TIMEOUT",
+                String.format("Validation timed out after 30 seconds for rule code %s", ruleCode),
+                null
+            ));
+        } catch (Exception e) {
+            log.error("Error during parallel validation for rule {}: {}", ruleCode, e.getMessage(), e);
+            // Cancel any remaining futures
+            futures.forEach(future -> future.cancel(true));
+            allErrors.add(new ErrorDetail(
+                "EFX_C2O_ERR_PARALLEL_EXECUTION",
+                String.format("Error during parallel validation for rule %s: %s", ruleCode, e.getMessage()),
+                null
+            ));
+        }
+
+        return allErrors;
     }
-    
+
     private BusinessRule getBusinessRule(String ruleCode) {
         if (ruleCode == null) return null;
-        
         return ruleMap.get(ruleCode);
     }
 }

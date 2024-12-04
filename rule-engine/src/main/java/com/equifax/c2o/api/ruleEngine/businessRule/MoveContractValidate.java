@@ -35,22 +35,19 @@ public class MoveContractValidate extends BusinessRule {
         log.info("Received request: sourceContractId={}, targetContractId={}", 
                 requestInput.getSourceContractId(), requestInput.getTargetContractId());
 
-        List<ErrorDetail> retVal = new ArrayList<ErrorDetail>();
+        List<ErrorDetail> retVal = new ArrayList<>();
         boolean hasValidationErrors = false;
 
         // Validate required fields
         if (requestInput.getSourceContractId() == null || requestInput.getTargetContractId() == null) {
-            log.error("Source or Target Contract ID is missing");
+            String missingContract = requestInput.getSourceContractId() == null ? "Source" : "Target";
+            log.error("{} Contract ID is missing", missingContract);
             retVal.add(new ErrorDetail(
                 "EFX_C2O_ERR_MISSING_CONTRACT_ID", 
-                "Source and Target Contract IDs are required", 
-                EntityType.TRG_CONTRACT_ID.name() + "[" + 
-                    (requestInput.getSourceContractId() != null ? 
-                        requestInput.getSourceContractId().toString() : 
-                        requestInput.getTargetContractId() != null ? 
-                            requestInput.getTargetContractId().toString() : "") + "]"
+                missingContract + " Contract ID is required", 
+                EntityType.TRG_CONTRACT_ID.name() + "[null]"
             ));
-            return retVal; // Return immediately for null values as we can't proceed
+            return retVal;
         }
 
         // Validate contracts are different
@@ -59,7 +56,7 @@ public class MoveContractValidate extends BusinessRule {
             retVal.add(new ErrorDetail(
                 "EFX_C2O_ERR_SAME_CONTRACT", 
                 "Source and Target Contract IDs cannot be the same", 
-                EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
+                EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId() + "]"
             ));
             hasValidationErrors = true;
         }
@@ -148,7 +145,8 @@ public class MoveContractValidate extends BusinessRule {
                     log.error("Business unit information not found for one or both contracts");
                     retVal.add(new ErrorDetail("EFX_C2O_ERR_BU_NOT_FOUND", 
                         "Business unit information not found for one or both contracts",
-                        EntityType.TRG_CONTRACT_ID.name()));
+                        EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
+                    ));
                     hasValidationErrors = true;
                 }
 
@@ -167,12 +165,26 @@ public class MoveContractValidate extends BusinessRule {
                         }
                     }
 
-                    if (!sourceBuId.equals(targetBuId)) {
+                    // Check if either BU is null
+                    if (sourceBuId == null || targetBuId == null) {
+                        String missingBuContract = sourceBuId == null ? "Source" : "Target";
+                        log.error("Business unit not found for {} contract", missingBuContract);
+                        retVal.add(new ErrorDetail(
+                            "EFX_C2O_ERR_BU_NOT_FOUND", 
+                            "Business unit not found for " + missingBuContract + " contract",
+                            EntityType.TRG_CONTRACT_ID.name() + "[" + 
+                                (sourceBuId == null ? requestInput.getSourceContractId() : requestInput.getTargetContractId()) + "]"
+                        ));
+                        hasValidationErrors = true;
+                    } else if (!sourceBuId.equals(targetBuId)) {
                         log.error("Business units do not match: source={}, target={}", sourceBuId, targetBuId);
-                        retVal.add(new ErrorDetail("EFX_C2O_ERR_BU_MISMATCH", 
+                        retVal.add(new ErrorDetail(
+                            "EFX_C2O_ERR_BU_MISMATCH", 
                             "Source contract business unit (" + sourceBuId + 
                             ") does not match target contract business unit (" + targetBuId + ")",
-                            EntityType.TRG_CONTRACT_ID.name()));
+                            EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId() + "]"
+                        ));
+                        hasValidationErrors = true;
                     }
                 }
             }
