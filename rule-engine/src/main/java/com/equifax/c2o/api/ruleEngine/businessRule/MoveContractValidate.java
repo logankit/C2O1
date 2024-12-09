@@ -110,9 +110,7 @@ public class MoveContractValidate extends BusinessRule {
                     ));
                 }
                 hasValidationErrors = true;
-            }
-
-            if (!hasValidationErrors) {
+            } else {
                 // Check if both contracts are latest version and completed status
                 for (Object[] contract : contracts) {
                     Long contractId = ((Number) contract[0]).longValue();
@@ -173,9 +171,7 @@ public class MoveContractValidate extends BusinessRule {
                         EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
                     ));
                     hasValidationErrors = true;
-                }
-
-                if (!hasValidationErrors) {
+                } else {
                     String sourceBuId = null;
                     String targetBuId = null;
 
