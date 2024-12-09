@@ -95,14 +95,14 @@ public class MoveContractValidate extends BusinessRule {
                     .map(contract -> ((Number) contract[0]).longValue())
                     .collect(Collectors.toList());
                 
-                if (!foundContractIds.contains(requestInput.getSourceContractId())) {
+                if (!foundContractIds.contains(requestInput.getSourceContractId().longValue())) {
                     retVal.add(new ErrorDetail(
                         "EFX_C2O_ERR_CONTRACT_NOT_FOUND", 
                         "Source contract not found", 
                         EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
                     ));
                 }
-                if (!foundContractIds.contains(requestInput.getTargetContractId())) {
+                if (!foundContractIds.contains(requestInput.getTargetContractId().longValue())) {
                     retVal.add(new ErrorDetail(
                         "EFX_C2O_ERR_CONTRACT_NOT_FOUND", 
                         "Target contract not found", 
@@ -119,7 +119,7 @@ public class MoveContractValidate extends BusinessRule {
                     Number status = (Number) contract[1];
                     Long maxContractId = ((Number) contract[2]).longValue();
                     
-                    String contractType = contractId.equals(Long.valueOf(requestInput.getSourceContractId())) 
+                    String contractType = contractId.equals(requestInput.getSourceContractId().longValue()) 
                         ? "Source" : "Target";
                     
                     // Check if contract is not completed (status != COMPLETED_STATUS)
@@ -183,7 +183,7 @@ public class MoveContractValidate extends BusinessRule {
                         Long contractId = ((Number) result[0]).longValue();
                         String buId = (String) result[1];
                         
-                        if (contractId.equals(Long.valueOf(requestInput.getSourceContractId()))) {
+                        if (contractId.equals(requestInput.getSourceContractId().longValue())) {
                             sourceBuId = buId;
                         } else {
                             targetBuId = buId;

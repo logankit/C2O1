@@ -45,7 +45,14 @@ public class MoveAccountValidate extends BusinessRule {
     public List<ErrorDetail> validate(Object inputData) throws Exception {
         log.info("Starting validation for MOVE_ACCOUNT_VALIDATE");
         ObjectMapper mapper = new ObjectMapper();
-        MoveAccountRequest requestInput = mapper.readValue((String)inputData, MoveAccountRequest.class);
+        MoveAccountRequest requestInput;
+        
+        if (inputData instanceof String) {
+            requestInput = mapper.readValue((String)inputData, MoveAccountRequest.class);
+        } else {
+            requestInput = mapper.convertValue(inputData, MoveAccountRequest.class);
+        }
+        
         log.info("Received request: sourceContractId={}, targetContractId={}", 
                 requestInput.getSourceContractId(), requestInput.getTargetContractId());
 
