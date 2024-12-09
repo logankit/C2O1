@@ -19,19 +19,28 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class MoveContractValidate extends BusinessRule {
 
+    private static final int COMPLETED_STATUS = 6;
+
     @PersistenceContext
     private EntityManager em;
 
     @Override
     public String getRuleName() {
-        return "MOVE_CONTRACT_VALIDATE";
+        return "MOVE_ACCOUNT_CONTRACT_VALIDATE";
     }
 
     @Override
     public List<ErrorDetail> validate(Object inputData) throws Exception {
-        log.info("Starting validation for MOVE_CONTRACT_VALIDATE");
+        log.info("Starting validation for MOVE_ACCOUNT_CONTRACT_VALIDATE");
         ObjectMapper mapper = new ObjectMapper();
-        MoveContractRequest requestInput = mapper.readValue((String)inputData, MoveContractRequest.class);
+        MoveContractRequest requestInput;
+        
+        if (inputData instanceof String) {
+            requestInput = mapper.readValue((String)inputData, MoveContractRequest.class);
+        } else {
+            requestInput = mapper.convertValue(inputData, MoveContractRequest.class);
+        }
+        
         log.info("Received request: sourceContractId={}, targetContractId={}", 
                 requestInput.getSourceContractId(), requestInput.getTargetContractId());
 
@@ -62,9 +71,10 @@ public class MoveContractValidate extends BusinessRule {
         }
 
         if (!hasValidationErrors) {
-            // Query to validate contracts exist and are latest versions
+            // Query to validate contracts exist and are latest versions and completed status
             String latestContractQuery = 
                 "SELECT c.contract_id, " +
+                "       c.status, " +
                 "       (SELECT MAX(contract_id) " +
                 "        FROM c2o_contract " +
                 "        WHERE root_contract_id = c.root_contract_id) as max_contract_id " +
@@ -103,15 +113,30 @@ public class MoveContractValidate extends BusinessRule {
             }
 
             if (!hasValidationErrors) {
-                // Check if both contracts are latest version
+                // Check if both contracts are latest version and completed status
                 for (Object[] contract : contracts) {
                     Long contractId = ((Number) contract[0]).longValue();
-                    Long maxContractId = ((Number) contract[1]).longValue();
+                    Number status = (Number) contract[1];
+                    Long maxContractId = ((Number) contract[2]).longValue();
                     
-                    if (!contractId.equals(maxContractId)) {
-                        String contractType = contractId.equals(Long.valueOf(requestInput.getSourceContractId())) 
-                            ? "Source" : "Target";
+                    String contractType = contractId.equals(Long.valueOf(requestInput.getSourceContractId())) 
+                        ? "Source" : "Target";
+                    
+                    // Check if contract is not completed (status != COMPLETED_STATUS)
+                    if (status == null || status.intValue() != COMPLETED_STATUS) {
+                        log.error("{} Contract {} is not in completed status. Current status: {}", 
+                            contractType, contractId, status);
                         
+                        retVal.add(new ErrorDetail(
+                            "EFX_C2O_ERR_CONTRACT_NOT_COMPLETED", 
+                            contractType + " Contract " + contractId + " is not in completed status",
+                            EntityType.TRG_CONTRACT_ID.name() + "[" + contractId.toString() + "]"
+                        ));
+                        hasValidationErrors = true;
+                    }
+                    
+                    // Check if contract is latest version
+                    if (!contractId.equals(maxContractId)) {
                         log.error("{} Contract {} is not the latest version. Latest version is {}", 
                             contractType, contractId, maxContractId);
                         
