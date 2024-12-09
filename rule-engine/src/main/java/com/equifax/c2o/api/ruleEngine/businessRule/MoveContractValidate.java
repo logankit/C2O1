@@ -70,144 +70,140 @@ public class MoveContractValidate extends BusinessRule {
             hasValidationErrors = true;
         }
 
-        if (!hasValidationErrors) {
-            // Query to validate contracts exist and are latest versions and completed status
-            String latestContractQuery = 
-                "SELECT c.contract_id, " +
-                "       c.status, " +
-                "       (SELECT MAX(contract_id) " +
-                "        FROM c2o_contract " +
-                "        WHERE root_contract_id = c.root_contract_id) as max_contract_id " +
-                "FROM c2o_contract c " +
-                "WHERE c.contract_id IN (:sourceContractId, :targetContractId)";
+        // Query to validate contracts exist and are latest versions and completed status
+        String latestContractQuery = 
+            "SELECT c.contract_id, " +
+            "       c.status, " +
+            "       (SELECT MAX(contract_id) " +
+            "        FROM c2o_contract " +
+            "        WHERE root_contract_id = c.root_contract_id) as max_contract_id " +
+            "FROM c2o_contract c " +
+            "WHERE c.contract_id IN (:sourceContractId, :targetContractId)";
 
-            log.debug("Executing latest contract query: {}", latestContractQuery);
-            Query query = em.createNativeQuery(latestContractQuery);
-            query.setParameter("sourceContractId", requestInput.getSourceContractId());
-            query.setParameter("targetContractId", requestInput.getTargetContractId());
+        log.debug("Executing latest contract query: {}", latestContractQuery);
+        Query query = em.createNativeQuery(latestContractQuery);
+        query.setParameter("sourceContractId", requestInput.getSourceContractId());
+        query.setParameter("targetContractId", requestInput.getTargetContractId());
 
-            List<Object[]> contracts = query.getResultList();
+        List<Object[]> contracts = query.getResultList();
 
-            // Check if both contracts exist
-            if (contracts.size() != 2) {
-                log.error("One or both contracts not found");
-                List<Long> foundContractIds = contracts.stream()
-                    .map(contract -> ((Number) contract[0]).longValue())
-                    .collect(Collectors.toList());
+        // Check if both contracts exist
+        if (contracts.size() != 2) {
+            log.error("One or both contracts not found");
+            List<Long> foundContractIds = contracts.stream()
+                .map(contract -> ((Number) contract[0]).longValue())
+                .collect(Collectors.toList());
+            
+            if (!foundContractIds.contains(requestInput.getSourceContractId().longValue())) {
+                retVal.add(new ErrorDetail(
+                    "EFX_C2O_ERR_CONTRACT_NOT_FOUND", 
+                    "Source contract not found", 
+                    EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
+                ));
+            }
+            if (!foundContractIds.contains(requestInput.getTargetContractId().longValue())) {
+                retVal.add(new ErrorDetail(
+                    "EFX_C2O_ERR_CONTRACT_NOT_FOUND", 
+                    "Target contract not found", 
+                    EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getTargetContractId().toString() + "]"
+                ));
+            }
+            hasValidationErrors = true;
+        } else {
+            // Check if both contracts are latest version and completed status
+            for (Object[] contract : contracts) {
+                Long contractId = ((Number) contract[0]).longValue();
+                Number status = (Number) contract[1];
+                Long maxContractId = ((Number) contract[2]).longValue();
                 
-                if (!foundContractIds.contains(requestInput.getSourceContractId().longValue())) {
+                String contractType = contractId.equals(requestInput.getSourceContractId().longValue()) 
+                    ? "Source" : "Target";
+                
+                // Check if contract is not completed (status != COMPLETED_STATUS)
+                if (status == null || status.intValue() != COMPLETED_STATUS) {
+                    log.error("{} Contract {} is not in completed status. Current status: {}", 
+                        contractType, contractId, status);
+                    
                     retVal.add(new ErrorDetail(
-                        "EFX_C2O_ERR_CONTRACT_NOT_FOUND", 
-                        "Source contract not found", 
-                        EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
+                        "EFX_C2O_ERR_CONTRACT_NOT_COMPLETED", 
+                        contractType + " Contract " + contractId + " is not in completed status",
+                        EntityType.TRG_CONTRACT_ID.name() + "[" + contractId.toString() + "]"
                     ));
+                    hasValidationErrors = true;
                 }
-                if (!foundContractIds.contains(requestInput.getTargetContractId().longValue())) {
+                
+                // Check if contract is latest version
+                if (!contractId.equals(maxContractId)) {
+                    log.error("{} Contract {} is not the latest version. Latest version is {}", 
+                        contractType, contractId, maxContractId);
+                    
                     retVal.add(new ErrorDetail(
-                        "EFX_C2O_ERR_CONTRACT_NOT_FOUND", 
-                        "Target contract not found", 
-                        EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getTargetContractId().toString() + "]"
+                        "EFX_C2O_ERR_NOT_LATEST_CONTRACT", 
+                        contractType + " Contract " + contractId + " is not the latest version. " +
+                        "Latest Contract ID is " + maxContractId,
+                        EntityType.TRG_CONTRACT_ID.name() + "[" + contractId.toString() + "]"
                     ));
+                    hasValidationErrors = true;
                 }
-                hasValidationErrors = true;
-            } else {
-                // Check if both contracts are latest version and completed status
-                for (Object[] contract : contracts) {
-                    Long contractId = ((Number) contract[0]).longValue();
-                    Number status = (Number) contract[1];
-                    Long maxContractId = ((Number) contract[2]).longValue();
-                    
-                    String contractType = contractId.equals(requestInput.getSourceContractId().longValue()) 
-                        ? "Source" : "Target";
-                    
-                    // Check if contract is not completed (status != COMPLETED_STATUS)
-                    if (status == null || status.intValue() != COMPLETED_STATUS) {
-                        log.error("{} Contract {} is not in completed status. Current status: {}", 
-                            contractType, contractId, status);
-                        
-                        retVal.add(new ErrorDetail(
-                            "EFX_C2O_ERR_CONTRACT_NOT_COMPLETED", 
-                            contractType + " Contract " + contractId + " is not in completed status",
-                            EntityType.TRG_CONTRACT_ID.name() + "[" + contractId.toString() + "]"
-                        ));
-                        hasValidationErrors = true;
-                    }
-                    
-                    // Check if contract is latest version
-                    if (!contractId.equals(maxContractId)) {
-                        log.error("{} Contract {} is not the latest version. Latest version is {}", 
-                            contractType, contractId, maxContractId);
-                        
-                        retVal.add(new ErrorDetail(
-                            "EFX_C2O_ERR_NOT_LATEST_CONTRACT", 
-                            contractType + " Contract " + contractId + " is not the latest version. " +
-                            "Latest Contract ID is " + maxContractId,
-                            EntityType.TRG_CONTRACT_ID.name() + "[" + contractId.toString() + "]"
-                        ));
-                        hasValidationErrors = true;
-                    }
+            }
+        }
+
+        // Query to get business units for both contracts - Independent of other validations
+        String buQuery = 
+            "SELECT c.contract_id, cbi.bu_id " +
+            "FROM c2o_contract c, c2o_contract_bu_intr cbi " +
+            "WHERE c.contract_id = cbi.contract_id " +
+            "AND c.contract_id IN (:sourceContractId, :targetContractId)";
+
+        log.debug("Executing business unit query: {}", buQuery);
+        Query buQueryObj = em.createNativeQuery(buQuery);
+        buQueryObj.setParameter("sourceContractId", requestInput.getSourceContractId());
+        buQueryObj.setParameter("targetContractId", requestInput.getTargetContractId());
+
+        List<Object[]> buResults = buQueryObj.getResultList();
+
+        if (buResults.size() != 2) {
+            log.error("Business unit information not found for one or both contracts");
+            retVal.add(new ErrorDetail("EFX_C2O_ERR_BU_NOT_FOUND", 
+                "Business unit information not found for one or both contracts",
+                EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
+            ));
+            hasValidationErrors = true;
+        } else {
+            String sourceBuId = null;
+            String targetBuId = null;
+
+            for (Object[] result : buResults) {
+                Long contractId = ((Number) result[0]).longValue();
+                String buId = (String) result[1];
+                
+                if (contractId.equals(requestInput.getSourceContractId().longValue())) {
+                    sourceBuId = buId;
+                } else {
+                    targetBuId = buId;
                 }
             }
 
-            if (!hasValidationErrors) {
-                // Query to get business units for both contracts
-                String buQuery = 
-                    "SELECT c.contract_id, cbi.bu_id " +
-                    "FROM c2o_contract c, c2o_contract_bu_intr cbi " +
-                    "WHERE c.contract_id = cbi.contract_id " +
-                    "AND c.contract_id IN (:sourceContractId, :targetContractId)";
-
-                log.debug("Executing business unit query: {}", buQuery);
-                Query buQueryObj = em.createNativeQuery(buQuery);
-                buQueryObj.setParameter("sourceContractId", requestInput.getSourceContractId());
-                buQueryObj.setParameter("targetContractId", requestInput.getTargetContractId());
-
-                List<Object[]> buResults = buQueryObj.getResultList();
-
-                if (buResults.size() != 2) {
-                    log.error("Business unit information not found for one or both contracts");
-                    retVal.add(new ErrorDetail("EFX_C2O_ERR_BU_NOT_FOUND", 
-                        "Business unit information not found for one or both contracts",
-                        EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
-                    ));
-                    hasValidationErrors = true;
-                } else {
-                    String sourceBuId = null;
-                    String targetBuId = null;
-
-                    for (Object[] result : buResults) {
-                        Long contractId = ((Number) result[0]).longValue();
-                        String buId = (String) result[1];
-                        
-                        if (contractId.equals(requestInput.getSourceContractId().longValue())) {
-                            sourceBuId = buId;
-                        } else {
-                            targetBuId = buId;
-                        }
-                    }
-
-                    // Check if either BU is null
-                    if (sourceBuId == null || targetBuId == null) {
-                        String missingBuContract = sourceBuId == null ? "Source" : "Target";
-                        log.error("Business unit not found for {} contract", missingBuContract);
-                        retVal.add(new ErrorDetail(
-                            "EFX_C2O_ERR_BU_NOT_FOUND", 
-                            "Business unit not found for " + missingBuContract + " contract",
-                            EntityType.TRG_CONTRACT_ID.name() + "[" + 
-                                (sourceBuId == null ? requestInput.getSourceContractId() : requestInput.getTargetContractId()) + "]"
-                        ));
-                        hasValidationErrors = true;
-                    } else if (!sourceBuId.equals(targetBuId)) {
-                        log.error("Business units do not match: source={}, target={}", sourceBuId, targetBuId);
-                        retVal.add(new ErrorDetail(
-                            "EFX_C2O_ERR_BU_MISMATCH", 
-                            "Source contract business unit (" + sourceBuId + 
-                            ") does not match target contract business unit (" + targetBuId + ")",
-                            EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId() + "]"
-                        ));
-                        hasValidationErrors = true;
-                    }
-                }
+            // Check if either BU is null
+            if (sourceBuId == null || targetBuId == null) {
+                String missingBuContract = sourceBuId == null ? "Source" : "Target";
+                log.error("Business unit not found for {} contract", missingBuContract);
+                retVal.add(new ErrorDetail(
+                    "EFX_C2O_ERR_BU_NOT_FOUND", 
+                    "Business unit not found for " + missingBuContract + " contract",
+                    EntityType.TRG_CONTRACT_ID.name() + "[" + 
+                        (sourceBuId == null ? requestInput.getSourceContractId() : requestInput.getTargetContractId()) + "]"
+                ));
+                hasValidationErrors = true;
+            } else if (!sourceBuId.equals(targetBuId)) {
+                log.error("Business units do not match: source={}, target={}", sourceBuId, targetBuId);
+                retVal.add(new ErrorDetail(
+                    "EFX_C2O_ERR_BU_MISMATCH", 
+                    "Source contract business unit (" + sourceBuId + 
+                    ") does not match target contract business unit (" + targetBuId + ")",
+                    EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId() + "]"
+                ));
+                hasValidationErrors = true;
             }
         }
 
