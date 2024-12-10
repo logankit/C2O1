@@ -63,26 +63,28 @@ public class MoveAccountValidate extends BusinessRule {
         // Validate required fields
         if (requestInput.getSourceContractId() == null || requestInput.getTargetContractId() == null) {
             log.error("Source or Target Contract ID is missing");
+            String entityValue = "";
+            if (requestInput.getSourceContractId() != null) {
+                entityValue = requestInput.getSourceContractId().toPlainString();
+            } else if (requestInput.getTargetContractId() != null) {
+                entityValue = requestInput.getTargetContractId().toPlainString();
+            }
             retVal.add(new ErrorDetail(
                 "EFX_C2O_ERR_MISSING_CONTRACT_ID", 
                 "Source and Target Contract IDs are required", 
-                EntityType.TRG_CONTRACT_ID.name() + "[" + 
-                    (requestInput.getSourceContractId() != null ? 
-                        requestInput.getSourceContractId().toString() : 
-                        requestInput.getTargetContractId() != null ? 
-                            requestInput.getTargetContractId().toString() : "") + "]"
+                EntityType.TRG_CONTRACT_ID.name() + "[" + entityValue + "]"
             ));
             hasValidationErrors = true;
         }
 
         // Validate contracts are different
-        if (requestInput.getSourceContractId() != null && 
+        if (requestInput.getSourceContractId() != null && requestInput.getTargetContractId() != null &&
             requestInput.getSourceContractId().compareTo(requestInput.getTargetContractId()) == 0) {
-            log.error("Source and Target Contract IDs are the same: {}", requestInput.getSourceContractId());
+            log.error("Source and Target Contract IDs are the same: {}", requestInput.getSourceContractId().toPlainString());
             retVal.add(new ErrorDetail(
                 "EFX_C2O_ERR_SAME_CONTRACT", 
                 "Source and Target Contract IDs cannot be the same", 
-                EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toString() + "]"
+                EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toPlainString() + "]"
             ));
             hasValidationErrors = true;
         }
