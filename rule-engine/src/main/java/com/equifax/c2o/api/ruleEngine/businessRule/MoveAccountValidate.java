@@ -254,10 +254,11 @@ public class MoveAccountValidate extends BusinessRule {
         // moving to a different BDOM
         if(!sourceShiptos.isEmpty() && !targetBillTos.isEmpty()) {
             String queryStr2 = "SELECT a.oba_number, b.billing_day_of_month as source_bdom, t.billing_day_of_month as target_bdom " +
-                "FROM c2o_account a " +
-                "JOIN c2o_account b ON a.parent_account_id = b.row_id " +
-                "JOIN c2o_account t ON t.oba_number = :p_target_billto " +
-                "WHERE a.account_version = :version " +
+                "FROM c2o_account a, c2o_account b, c2o_account t " +
+                "WHERE a.parent_account_id = b.row_id " +
+                "AND a.oba_number = t.oba_number " +
+                "AND t.oba_number = :p_target_billto " +
+                "AND a.account_version = :version " +
                 "AND t.account_version = :version " +
                 "AND a.oba_number IN :p_oba_list " +
                 "AND b.billing_day_of_month != t.billing_day_of_month";
@@ -275,9 +276,9 @@ public class MoveAccountValidate extends BusinessRule {
                     List<Object[]> bdomResults = query2.getResultList();
                     if (!bdomResults.isEmpty()) {
                         bdomResults.forEach(result -> {
-                            String shiptoOba = (String) result[0];
-                            String sourceBdom = (String) result[1];
-                            String targetBdom = (String) result[2];
+                            String shiptoOba = result[0].toString();
+                            String sourceBdom = result[1] != null ? result[1].toString() : null;
+                            String targetBdom = result[2] != null ? result[2].toString() : null;
                             
                             log.warn("BDOM mismatch for shipto: {} (source BDOM: {}, target BDOM: {})", 
                                     shiptoOba, sourceBdom, targetBdom);
@@ -313,14 +314,15 @@ public class MoveAccountValidate extends BusinessRule {
 
         // shipto and billto can't be moved together
         if (!sourceShiptos.isEmpty() && !sourceBillTos.isEmpty()) {
-            String queryStr3 = "Select a.oba_number from c2o_account a "
-                + " join c2o_account b on a.parent_account_id = b.row_id "
-                + " where a.account_version = :version "
-                + " and a.oba_number in :p_oba_list "
-                + " and exists (select 1 from c2o_account bb "
-                + "             where bb.account_version = :version "
-                + "             and bb.oba_number = b.oba_number "
-                + "             and bb.oba_number in :p_billto_list)";
+            String queryStr3 = "SELECT a.oba_number " +
+                "FROM c2o_account a, c2o_account b, c2o_account bb " +
+                "WHERE a.parent_account_id = b.row_id " +
+                "AND bb.account_version = :version " +
+                "AND bb.oba_number = b.oba_number " +
+                "AND bb.oba_number IN :p_billto_list " +
+                "AND a.account_version = :version " +
+                "AND a.oba_number IN :p_oba_list";
+
             log.debug("Executing shipto-billto validation query: {}", queryStr3);
             log.debug("Query parameters - p_oba_list: {}, p_billto_list: {}", sourceShiptos, sourceBillTos);
             
