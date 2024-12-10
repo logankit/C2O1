@@ -22,6 +22,7 @@ import jakarta.persistence.Query;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 
 @Slf4j
@@ -76,7 +77,7 @@ public class MoveAccountValidate extends BusinessRule {
 
         // Validate contracts are different
         if (requestInput.getSourceContractId() != null && 
-            requestInput.getSourceContractId().equals(requestInput.getTargetContractId())) {
+            requestInput.getSourceContractId().compareTo(requestInput.getTargetContractId()) == 0) {
             log.error("Source and Target Contract IDs are the same: {}", requestInput.getSourceContractId());
             retVal.add(new ErrorDetail(
                 "EFX_C2O_ERR_SAME_CONTRACT", 
