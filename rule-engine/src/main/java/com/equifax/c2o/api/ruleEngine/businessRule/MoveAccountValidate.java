@@ -251,14 +251,14 @@ public class MoveAccountValidate extends BusinessRule {
             }
         }
 
-        // moving to a different BDOM
+        // moving to different billing day of the month validate
         if(!sourceShiptos.isEmpty() && !targetBillTos.isEmpty()) {
             String queryStr2 = "SELECT a.oba_number, b.billing_day_of_month as source_bdom, t.billing_day_of_month as target_bdom " +
                 "FROM c2o_account a, c2o_account b, c2o_account t " +
                 "WHERE a.parent_account_id = b.row_id " +
-                "AND a.oba_number = t.oba_number " +
                 "AND t.oba_number = :p_target_billto " +
                 "AND a.account_version = :version " +
+                "AND b.account_version = :version " +
                 "AND t.account_version = :version " +
                 "AND a.oba_number IN :p_oba_list " +
                 "AND b.billing_day_of_month != t.billing_day_of_month";
@@ -266,7 +266,9 @@ public class MoveAccountValidate extends BusinessRule {
             requestInput.getShipTos().forEach(shipto -> {
                 if (shipto.getObaNumbers() != null && !shipto.getObaNumbers().isEmpty() 
                     && shipto.getTargetBillTo() != null) {
-                    log.debug("Executing BDOM validation query for target BillTo: {}", shipto.getTargetBillTo());
+                    log.info("Validating BDOM - ShipTo(s): {}, Target BillTo: {}", 
+                            shipto.getObaNumbers(), shipto.getTargetBillTo());
+                    log.debug("BDOM validation query: {}", queryStr2);
                     
                     Query query2 = em.createNativeQuery(queryStr2);
                     query2.setParameter("version", ACCOUNT_VERSION_CURRENT);
@@ -274,13 +276,15 @@ public class MoveAccountValidate extends BusinessRule {
                     query2.setParameter("p_target_billto", shipto.getTargetBillTo());
                     
                     List<Object[]> bdomResults = query2.getResultList();
+                    log.info("Found {} BDOM mismatches", bdomResults.size());
+                    
                     if (!bdomResults.isEmpty()) {
                         bdomResults.forEach(result -> {
                             String shiptoOba = result[0].toString();
                             String sourceBdom = result[1] != null ? result[1].toString() : null;
                             String targetBdom = result[2] != null ? result[2].toString() : null;
                             
-                            log.warn("BDOM mismatch for shipto: {} (source BDOM: {}, target BDOM: {})", 
+                            log.warn("BDOM mismatch detected - ShipTo: {}, Source BDOM: {}, Target BDOM: {}", 
                                     shiptoOba, sourceBdom, targetBdom);
                             retVal.add(new ErrorDetail(
                                 "EFX_SHIPTO_MOVING_TO_DIFFERENT_BDOM", 
@@ -289,6 +293,8 @@ public class MoveAccountValidate extends BusinessRule {
                                 EntityType.SHIP_TO_OBA_NUMBER.name() + "[" + shiptoOba + "]"
                             ));
                         });
+                    } else {
+                        log.info("No BDOM mismatches found for ShipTo(s): {}", shipto.getObaNumbers());
                     }
                 }
             });
