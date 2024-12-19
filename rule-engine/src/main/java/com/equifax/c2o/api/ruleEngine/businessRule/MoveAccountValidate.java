@@ -77,13 +77,15 @@ public class MoveAccountValidate extends BusinessRule {
             hasValidationErrors = true;
         }
 
-        // Validate contracts are different
+        // Validate contracts are different when moving bill-to accounts
         if (requestInput.getSourceContractId() != null && requestInput.getTargetContractId() != null &&
-            requestInput.getSourceContractId().compareTo(requestInput.getTargetContractId()) == 0) {
-            log.error("Source and Target Contract IDs are the same: {}", requestInput.getSourceContractId().toPlainString());
+            requestInput.getSourceContractId().compareTo(requestInput.getTargetContractId()) == 0 &&
+            requestInput.getBillTos() != null && !requestInput.getBillTos().isEmpty()) {
+            log.error("Source and Target Contract IDs are the same when moving bill-to accounts: {}", 
+                    requestInput.getSourceContractId().toPlainString());
             retVal.add(new ErrorDetail(
-                "EFX_C2O_ERR_SAME_CONTRACT", 
-                "Source and Target Contract IDs cannot be the same", 
+                "EFX_C2O_ERR_SAME_CONTRACT_BILLTO", 
+                "Source and Target Contract IDs cannot be the same when moving bill-to accounts", 
                 EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId().toPlainString() + "]"
             ));
             hasValidationErrors = true;
