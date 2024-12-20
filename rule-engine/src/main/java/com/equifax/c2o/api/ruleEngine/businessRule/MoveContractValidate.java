@@ -59,20 +59,9 @@ public class MoveContractValidate extends BusinessRule {
             return retVal;
         }
 
-        // Validate contracts are different
-        if (requestInput.getSourceContractId().equals(requestInput.getTargetContractId())) {
-            log.error("Source and Target Contract IDs are the same: {}", requestInput.getSourceContractId());
-            retVal.add(new ErrorDetail(
-                "EFX_C2O_ERR_SAME_CONTRACT", 
-                "Source and Target Contract IDs cannot be the same", 
-                EntityType.TRG_CONTRACT_ID.name() + "[" + requestInput.getSourceContractId() + "]"
-            ));
-            hasValidationErrors = true;
-        }
-
         // Query to validate contracts exist and are latest versions and completed status
         String latestContractQuery = 
-            "SELECT c.contract_id, " +
+            "SELECT DISTINCT c.contract_id, " +
             "       c.status, " +
             "       (SELECT MAX(contract_id) " +
             "        FROM c2o_contract " +
@@ -87,8 +76,9 @@ public class MoveContractValidate extends BusinessRule {
 
         List<Object[]> contracts = query.getResultList();
 
-        // Check if both contracts exist
-        if (contracts.size() != 2) {
+        // Check if contracts exist
+        int expectedContractCount = requestInput.getSourceContractId().equals(requestInput.getTargetContractId()) ? 1 : 2;
+        if (contracts.size() != expectedContractCount) {
             log.error("One or both contracts not found");
             List<Long> foundContractIds = contracts.stream()
                 .map(contract -> ((Number) contract[0]).longValue())
@@ -110,7 +100,7 @@ public class MoveContractValidate extends BusinessRule {
             }
             hasValidationErrors = true;
         } else {
-            // Check if both contracts are latest version and completed status
+            // Check if contracts are latest version and completed status
             for (Object[] contract : contracts) {
                 Long contractId = ((Number) contract[0]).longValue();
                 Number status = (Number) contract[1];
@@ -119,8 +109,8 @@ public class MoveContractValidate extends BusinessRule {
                 String contractType = contractId.equals(requestInput.getSourceContractId().longValue()) 
                     ? "Source" : "Target";
                 
-                // Check if contract is not completed (status != COMPLETED_STATUS)
-                if (status == null || status.intValue() != COMPLETED_STATUS) {
+                // Check if contract is not completed (status != 6)
+                if (status == null || status.intValue() != 6) {
                     log.error("{} Contract {} is not in completed status. Current status: {}", 
                         contractType, contractId, status);
                     
@@ -148,12 +138,12 @@ public class MoveContractValidate extends BusinessRule {
             }
         }
 
-        // Query to get business units for both contracts - Independent of other validations
+        // Query to get business units for contracts
         String buQuery = 
-            "SELECT c.contract_id, cbi.bu_id " +
-            "FROM c2o_contract c, c2o_contract_bu_intr cbi " +
-            "WHERE c.contract_id = cbi.contract_id " +
-            "AND c.contract_id IN (:sourceContractId, :targetContractId)";
+            "SELECT DISTINCT c.contract_id, cbi.bu_id " +
+            "FROM c2o_contract c " +
+            "JOIN c2o_contract_bu_intr cbi ON c.contract_id = cbi.contract_id " +
+            "WHERE c.contract_id IN (:sourceContractId, :targetContractId)";
 
         log.debug("Executing business unit query: {}", buQuery);
         Query buQueryObj = em.createNativeQuery(buQuery);
@@ -162,7 +152,8 @@ public class MoveContractValidate extends BusinessRule {
 
         List<Object[]> buResults = buQueryObj.getResultList();
 
-        if (buResults.size() != 2) {
+        // For same contract case, we expect 1 result, for different contracts we expect 2
+        if (buResults.size() != expectedContractCount) {
             log.error("Business unit information not found for one or both contracts");
             retVal.add(new ErrorDetail("EFX_C2O_ERR_BU_NOT_FOUND", 
                 "Business unit information not found for one or both contracts",
@@ -179,7 +170,8 @@ public class MoveContractValidate extends BusinessRule {
                 
                 if (contractId.equals(requestInput.getSourceContractId().longValue())) {
                     sourceBuId = buId;
-                } else {
+                } 
+                if (contractId.equals(requestInput.getTargetContractId().longValue())) {
                     targetBuId = buId;
                 }
             }
@@ -195,7 +187,8 @@ public class MoveContractValidate extends BusinessRule {
                         (sourceBuId == null ? requestInput.getSourceContractId() : requestInput.getTargetContractId()) + "]"
                 ));
                 hasValidationErrors = true;
-            } else if (!sourceBuId.equals(targetBuId)) {
+            } else if (!sourceBuId.equals(targetBuId) && !requestInput.getSourceContractId().equals(requestInput.getTargetContractId())) {
+                // Only check BU mismatch for different contracts
                 log.error("Business units do not match: source={}, target={}", sourceBuId, targetBuId);
                 retVal.add(new ErrorDetail(
                     "EFX_C2O_ERR_BU_MISMATCH", 
